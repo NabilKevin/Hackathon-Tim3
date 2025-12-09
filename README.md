@@ -14,11 +14,13 @@
 | Nabil Kevin Ramadhan    | Backend Developer              |
 | Ricky Darmawan          | Frontend Developer             |
 
-## 📖 Tentang SinyalRoda
+## Deskripsi Tentang SinyalRoda
 
-**SinyalRoda** adalah aplikasi mobile berbasis IoT yang memberikan solusi lengkap untuk **keamanan & monitoring kendaraan modern**, sangat relevan dengan perkembangan industri otomotif – terutama kendaraan listrik (EV) di Indonesia.
+**Sinyal Roda** adalah sebuah aplikasi pemantauan dan manajemen operasional untuk kendaraan roda dua (terutama motor) yang dirancang untuk membantu pengguna dalam mendapatkan informasi kondisi kendaraan secara real-time dan lebih terstruktur. Aplikasi ini memungkinkan pengguna untuk mencatat, memonitor, dan menerima pengingat mengenai perawatan berkala seperti servis, penggantian oli, dan komponen penting lainnya. Dengan adanya sistem notifikasi dan pencatatan otomatis, pengguna tidak lagi perlu mengingat manual jadwal perawatan, sehingga risiko kerusakan akibat keterlambatan servis dapat diminimalisir.
 
-## ⚡ Latar Belakang Masalah
+Selain itu, **Sinyal Roda** juga menyediakan fitur pencatatan sederhana terkait riwayat perawatan kendaraan, biaya servis. Dengan teknologi web dan mobile yang terintegrasi, proyek ini bertujuan memberikan kemudahan bagi pemilik kendaraan roda dua dalam menjaga performa kendaraan tetap optimal dan aman digunakan.Dan juga Aplikasi ini memiliki fitur tambahan untuk keamanan kendaraan, seperti fitur engine-lock, alarm, getaran, dan juga pelacakan lokasi terkini kendaraan. Aplikasi ini diharapkan dapat meningkatkan kesadaran pemeliharaan mandiri dan membantu pengguna dalam membuat keputusan yang lebih tepat terkait perawatan kendaraan mereka dan membantu pengguna untuk memiliki kontrol lebih pada kendaraan nya dan meminimalisir pencurian.
+
+## Latar Belakang Masalah
 
 Indonesia memiliki lebih dari **125 juta sepeda motor** (data Korlantas Polri) – terbesar di Asia Tenggara. Sayangnya, sistem keamanan dan monitoring masih sangat terbatas:
 
@@ -33,11 +35,11 @@ Indonesia memiliki lebih dari **125 juta sepeda motor** (data Korlantas Polri) �
 
 **SinyalRoda hadir sebagai solusi satu atap (all-in-one).**
 
-## ✨ Fitur Utama
+## Fitur Utama
 
-- 🔒 **Smart Security** – Alarm anti-maling, immobilizer digital, notifikasi jika motor digerakkan tanpa izin
+- 🔒 **Smart Security** – Alarm anti-maling, Fitur Matikan Mesin dari Smartphone, notifikasi jika motor digerakkan tanpa izin
 - 🛰️ **Real-time GPS Tracking** – Lacak posisi kendaraan kapan saja
-- 📊 **Vehicle Health Monitoring** – Status baterai, suhu mesin, tekanan ban, voltase (khususnya untuk motor listrik)
+- 📊 **Vehicle Health Monitoring** – Status aki/baterai, bensin, Odometer, voltase (khususnya untuk motor listrik)
 - 🚨 **Geo-fencing** – Peringatan jika kendaraan keluar dari zona aman
 - 🛠️ **Smart Service Reminder** – Pengingat jadwal servis otomatis + riwayat perawatan
 - 📱 **IoT Integration** – Terhubung langsung dengan modul OBD/IoT di kendaraan
@@ -48,7 +50,7 @@ Indonesia memiliki lebih dari **125 juta sepeda motor** (data Korlantas Polri) �
 | Layer               | Teknologi                              | Keterangan                                    |
 |---------------------|----------------------------------------|-----------------------------------------------|
 | Mobile Frontend     | React Native                           | Cross-platform (Android & iOS)                |
-| Backend API         | Laravel (PHP)                          | RESTful API, autentikasi JWT                  |
+| Backend API         | Laravel (PHP)                          | RESTful API, autentikasi Sanctum               |
 | Database            | MySQL                                  | Struktur data relasional                      |
 | IoT / Device Layer  | Modul OBD custom (BLE/WiFi) – simulasi | Mengirim data sensor dalam format JSON        |
 | Cloud Hosting       | Vercel / Netlify (Frontend)<br>Laravel Vapor / VPS (Backend) | Skalabel & serverless-ready |
