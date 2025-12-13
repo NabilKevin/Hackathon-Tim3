@@ -1,0 +1,311 @@
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React from "react";
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useColorScheme,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+/* ==========================
+   TYPES
+========================== */
+
+interface BaseItem {
+  id: string;
+  title: string;
+  icon: string;
+}
+
+interface NormalService extends BaseItem {
+  type?: "service";
+  price: string;
+  km: string;
+  date: string;
+  category: string;
+  note: string;
+}
+
+interface BatteryService extends BaseItem {
+  type: "battery";
+  batteryVoltage: string;
+  batteryStatus: "Good" | "Warning" | "Low";
+}
+
+type ServiceItem = NormalService | BatteryService;
+
+/* ==========================
+   DATA
+========================== */
+
+const DATA: ServiceItem[] = [
+  {
+    id: "1",
+    title: "Servis Rutin",
+    price: "Rp. 120.000",
+    km: "45,000 km",
+    date: "12 Okt",
+    icon: "tools",
+    category: "Servis Rutin",
+    note: "Ganti oli mesin, cek rem, dan tune-up lengkap.",
+  },
+  {
+    id: "2",
+    title: "Oli Mesin",
+    price: "Rp. 120.000",
+    km: "44,950 km",
+    date: "12 Okt",
+    icon: "oil",
+    category: "Oli Mesin",
+    note: "Penggantian oli mesin sintetis.",
+  },
+  {
+    id: "3",
+    title: "Oli Gear",
+    price: "Rp. 120.000",
+    km: "40,000 km",
+    date: "20 Aug",
+    icon: "cog",
+    category: "Oli Gear",
+    note: "Penggantian oli gear transmisi.",
+  },
+  {
+    id: "4",
+    title: "Status Aki",
+    icon: "car-battery",
+    type: "battery",
+    batteryVoltage: "12.4 V",
+    batteryStatus: "Good",
+  },
+];
+
+/* ==========================
+   SCREEN
+========================== */
+
+export default function ServiceScheduleScreen() {
+  const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const renderItem = ({ item }: { item: ServiceItem }) => {
+    // ===== STATUS AKI =====
+    if (item.type === "battery") {
+      return (
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: isDark ? "#1E293B" : "#FFFFFF" },
+          ]}
+        >
+          <View style={styles.cardRow}>
+            <View style={[styles.iconWrapper, { backgroundColor: "#E0F2FE" }]}>
+              <MaterialCommunityIcons
+                name="car-battery"
+                size={22}
+                color="#0EA5E9"
+              />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  styles.title,
+                  { color: isDark ? "#E5E7EB" : "#0F172A" },
+                ]}
+              >
+                Status Aki
+              </Text>
+              <Text style={styles.subtitle}>{item.batteryVoltage}</Text>
+            </View>
+
+            <Text
+              style={[
+                styles.batteryStatus,
+                {
+                  color:
+                    item.batteryStatus === "Good"
+                      ? "#22C55E"
+                      : item.batteryStatus === "Warning"
+                      ? "#F59E0B"
+                      : "#EF4444",
+                },
+              ]}
+            >
+              {item.batteryStatus}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    // ===== SERVIS BIASA =====
+    return (
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: isDark ? "#1E293B" : "#FFFFFF" },
+        ]}
+      >
+        <View style={styles.cardRow}>
+          <View style={styles.iconWrapper}>
+            <Ionicons
+              name="construct-outline"
+              size={22}
+              color="#3B82F6"
+            />
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                styles.title,
+                { color: isDark ? "#E5E7EB" : "#0F172A" },
+              ]}
+            >
+              {item.title}
+            </Text>
+            <Text style={styles.subtitle}>Estimasi 5–6 Hari</Text>
+          </View>
+
+          <View style={{ alignItems: "flex-end" }}>
+            <Text style={styles.kmText}>in {item.km}</Text>
+            <Text style={styles.dateText}>{item.date}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <View
+      style={{ flex: 1, backgroundColor: isDark ? "#0F172A" : "#F8FAFC" }}
+    >
+      {/* HEADER */}
+      <View
+        style={[
+          styles.headerWrapper,
+          {
+            paddingTop: insets.top,
+            backgroundColor: isDark ? "#0F172A" : "#FFFFFF",
+          },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons
+              name="chevron-back"
+              size={26}
+              color={isDark ? "#E2E8F0" : "#334155"}
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.headerTitle,
+              { color: isDark ? "#F8FAFC" : "#0F172A" },
+            ]}
+          >
+            Jadwal Servis
+          </Text>
+        </View>
+      </View>
+
+      {/* LIST */}
+      <FlatList
+        data={DATA}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={{ padding: 16 }}
+      />
+
+      {/* BUTTON */}
+      <TouchableOpacity style={styles.addButton}
+      onPress={() => {router.push("/(tabs)/vehicles/add-service")}} >
+        <Ionicons name="add-circle-outline" size={20} color="#3B82F6" />
+        <Text style={styles.addButtonText}>Tambahkan Data Servis</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+/* ==========================
+   STYLES
+========================== */
+
+const styles = StyleSheet.create({
+  headerWrapper: {
+    paddingBottom: 12,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+  },
+  card: {
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    elevation: 2,
+  },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconWrapper: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: "#E0F2FE",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  subtitle: {
+    fontSize: 12,
+    color: "#94A3B8",
+    marginTop: 2,
+  },
+  kmText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+  dateText: {
+    fontSize: 12,
+    color: "#94A3B8",
+    marginTop: 2,
+  },
+  batteryStatus: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 16,
+    marginBottom: 20,
+    paddingVertical: 12,
+    backgroundColor: "#E0F2FE",
+    borderRadius: 12,
+  },
+  addButtonText: {
+    marginLeft: 8,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+});
