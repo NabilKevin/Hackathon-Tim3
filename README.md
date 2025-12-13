@@ -44,7 +44,6 @@ Indonesia memiliki lebih dari **125 juta sepeda motor** (data Korlantas Polri) â
 | Layer               | Teknologi                              | Keterangan                                    |
 |---------------------|----------------------------------------|-----------------------------------------------|
 | Mobile Frontend     | React Native                           | Cross-platform (Android & iOS)                |
-| Backend API         | Laravel (PHP)                          | RESTful API, autentikasi JWT                  |
 | Backend API         | Laravel (PHP)                          | RESTful API, autentikasi Sanctum               |
 | Database            | MySQL                                  | Struktur data relasional                      |
 | IoT / Device Layer  | Modul OBD custom (BLE/WiFi) â€“ simulasi | Mengirim data sensor dalam format JSON        |
