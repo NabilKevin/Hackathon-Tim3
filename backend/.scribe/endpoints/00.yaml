@@ -1,0 +1,1541 @@
+name: Endpoints
+description: ''
+endpoints:
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/login
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Login pengguna dan dapatkan token akses.'
+      description: |-
+        Endpoint ini memungkinkan pengguna masuk dengan email dan password.
+        Jika kredensial valid, sistem mengembalikan token akses (Bearer Token)
+        yang digunakan untuk autentikasi di endpoint lain.
+      authenticated: false
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      email:
+        custom: []
+        name: email
+        description: 'Email pengguna.'
+        required: true
+        example: user@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      password:
+        custom: []
+        name: password
+        description: 'Password pengguna.'
+        required: true
+        example: secret123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanBodyParameters:
+      email: user@example.com
+      password: secret123
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil Login!",
+            "token": "1|abcdefghijklmnopqrstuvwxyz1234567890",
+            "user": {
+              "id": 1,
+              "username": "johndoe",
+              "email": "johndoe@example.com",
+              "created_at": "2025-12-01T10:00:00.000000Z",
+              "updated_at": "2025-12-01T10:00:00.000000Z"
+            }
+          }
+        headers: []
+        description: 'Berhasil login'
+      -
+        custom: []
+        status: 401
+        content: |-
+          {
+            "message": "Email atau password salah!"
+          }
+        headers: []
+        description: 'Kredensial salah'
+      -
+        custom: []
+        status: 422
+        content: |-
+          {
+            "message": "Kolom tidak valid",
+            "errors": {
+              "email": ["The email field is required."]
+            }
+          }
+        headers: []
+        description: 'Validasi gagal'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/register
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Mendaftarkan pengguna baru.'
+      description: 'Membuat akun pengguna baru. Username dan email harus unik.'
+      authenticated: false
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      username:
+        custom: []
+        name: username
+        description: 'Minimal 4 karakter, unik.'
+        required: true
+        example: johndoe
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      email:
+        custom: []
+        name: email
+        description: 'Format email valid, unik.'
+        required: true
+        example: johndoe@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      password:
+        custom: []
+        name: password
+        description: 'Minimal 8 karakter.'
+        required: true
+        example: securepassword123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      password_confirmation:
+        custom: []
+        name: password_confirmation
+        description: 'Harus sama dengan password.'
+        required: true
+        example: securepassword123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanBodyParameters:
+      username: johndoe
+      email: johndoe@example.com
+      password: securepassword123
+      password_confirmation: securepassword123
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Register berhasil!",
+            "user": {
+              "id": 2,
+              "username": "janedoe",
+              "email": "janedoe@example.com",
+              "created_at": "2025-12-06T12:00:00.000000Z",
+              "updated_at": "2025-12-06T12:00:00.000000Z"
+            }
+          }
+        headers: []
+        description: 'Registrasi berhasil'
+      -
+        custom: []
+        status: 422
+        content: |-
+          {
+            "message": "Kolom tidak valid",
+            "errors": {
+              "email": ["The email has already been taken."]
+            }
+          }
+        headers: []
+        description: 'Validasi gagal'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/logout
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Logout pengguna.'
+      description: |-
+        Menghancurkan sesi pengguna. Untuk aplikasi berbasis token (SPA),
+        Anda sebaiknya juga menghapus token di sisi klien.
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil Logout!"
+          }
+        headers: []
+        description: 'Berhasil logout'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - PUT
+    uri: api/update-profile
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Memperbarui profil pengguna yang sedang login.'
+      description: |-
+        Mengizinkan pengguna mengubah username, email, atau password.
+        Hanya field yang dikirim yang akan diupdate.
+        Jika mengganti password, pastikan kirim `password_confirmation`.
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      username:
+        custom: []
+        name: username
+        description: 'optional Jika diubah, harus unik dan minimal 4 karakter.'
+        required: false
+        example: johndoe_new
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      email:
+        custom: []
+        name: email
+        description: 'optional Jika diubah, harus berupa email unik.'
+        required: false
+        example: newemail@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      password:
+        custom: []
+        name: password
+        description: 'optional Minimal 8 karakter.'
+        required: false
+        example: newpassword123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      password_confirmation:
+        custom: []
+        name: password_confirmation
+        description: 'optional Harus cocok dengan password.'
+        required: false
+        example: newpassword123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanBodyParameters:
+      username: johndoe_new
+      email: newemail@example.com
+      password: newpassword123
+      password_confirmation: newpassword123
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil update user!",
+            "user": {
+              "id": 1,
+              "username": "johndoe_new",
+              "email": "newemail@example.com",
+              "created_at": "2025-12-01T10:00:00.000000Z",
+              "updated_at": "2025-12-06T14:30:00.000000Z"
+            }
+          }
+        headers: []
+        description: 'Update berhasil'
+      -
+        custom: []
+        status: 422
+        content: |-
+          {
+            "message": "Kolom tidak valid",
+            "errors": {
+              "username": ["The username has already been taken."]
+            }
+          }
+        headers: []
+        description: 'Validasi gagal'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/notifications
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Mendapatkan daftar notifikasi pengguna yang sedang login.'
+      description: 'Mengembalikan semua notifikasi atau difilter berdasarkan tipe.'
+      authenticated: false
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters:
+      type:
+        custom: []
+        name: type
+        description: "optional Tipe notifikasi: 'security', 'service', 'system', 'warning'. Jika tidak diisi, kembalikan semua."
+        required: false
+        example: service
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanQueryParameters:
+      type: service
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil mendapatkan notifikasi!",
+            "data": [
+              {
+                "id": 1,
+                "user_id": 1,
+                "title": "Servis Mendekat",
+                "content": "Kendaraan Anda perlu servis oli mesin.",
+                "type": "service",
+                "is_read": false,
+                "created_at": "2025-12-06T10:00:00.000000Z",
+                "updated_at": "2025-12-06T10:00:00.000000Z"
+              }
+            ]
+          }
+        headers: []
+        description: Berhasil
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: 'api/notifications/{id}'
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Menampilkan detail notifikasi berdasarkan ID.'
+      description: 'Hanya notifikasi milik pengguna yang sedang login yang dapat dilihat.'
+      authenticated: false
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      id:
+        custom: []
+        name: id
+        description: 'ID notifikasi.'
+        required: true
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanUrlParameters:
+      id: 1
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil mendapatkan notifikasi!",
+            "data": {
+              "id": 1,
+              "user_id": 1,
+              "title": "Servis Mendekat",
+              "content": "Kendaraan Anda perlu servis oli mesin.",
+              "type": "service",
+              "is_read": false,
+              "created_at": "2025-12-06T10:00:00.000000Z",
+              "updated_at": "2025-12-06T10:00:00.000000Z"
+            }
+          }
+        headers: []
+        description: Berhasil
+      -
+        custom: []
+        status: 403
+        content: |-
+          {
+            "message": "Bukan notifikasi milik Anda!"
+          }
+        headers: []
+        description: 'Akses ditolak'
+      -
+        custom: []
+        status: 404
+        content: |-
+          {
+            "message": "Notifikasi tidak ditemukan!"
+          }
+        headers: []
+        description: 'Notifikasi tidak ditemukan'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/vehicles
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Membuat kendaraan baru untuk pengguna yang sedang login.'
+      description: |-
+        Membuat entri kendaraan lengkap dengan telemetri awal, pengaturan keamanan,
+        lokasi awal, dan jadwal servis otomatis untuk tipe servis wajib.
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: multipart/form-data
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      name:
+        custom: []
+        name: name
+        description: 'Nama kendaraan (misal: "Jazz").'
+        required: true
+        example: Jazz
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      brand:
+        custom: []
+        name: brand
+        description: 'Merek kendaraan.'
+        required: true
+        example: Honda
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      transmission:
+        custom: []
+        name: transmission
+        description: 'Jenis transmisi.'
+        required: true
+        example: Automatic
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      year:
+        custom: []
+        name: year
+        description: 'Tahun produksi (1900–tahun ini).'
+        required: true
+        example: 2020
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      plate_number:
+        custom: []
+        name: plate_number
+        description: 'Nomor plat unik.'
+        required: true
+        example: B1234ABC
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      gas_type:
+        custom: []
+        name: gas_type
+        description: 'Jenis bahan bakar.'
+        required: true
+        example: Pertamax
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      machine_capacity:
+        custom: []
+        name: machine_capacity
+        description: 'Kapasitas mesin/muatan.'
+        required: true
+        example: '1500 cc'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      photo:
+        custom: []
+        name: photo
+        description: 'Foto kendaraan (jpg, png, jpeg, webp, max 2MB).'
+        required: true
+        example: null
+        type: file
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      latitude:
+        custom: []
+        name: latitude
+        description: 'Koordinat lintang (antara -90 dan 90).'
+        required: true
+        example: -6.2741
+        type: number
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      longitude:
+        custom: []
+        name: longitude
+        description: 'Koordinat bujur (antara -180 dan 180).'
+        required: true
+        example: 106.85
+        type: number
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanBodyParameters:
+      name: Jazz
+      brand: Honda
+      transmission: Automatic
+      year: 2020
+      plate_number: B1234ABC
+      gas_type: Pertamax
+      machine_capacity: '1500 cc'
+      latitude: -6.2741
+      longitude: 106.85
+    fileParameters:
+      photo: null
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil membuat kendaraan!"
+          }
+        headers: []
+        description: Berhasil
+      -
+        custom: []
+        status: 422
+        content: |-
+          {
+            "message": "Invalid field",
+            "errors": {
+              "plate_number": ["The plate number has already been taken."]
+            }
+          }
+        headers: []
+        description: 'Validasi gagal'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - PUT
+    uri: api/vehicles
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Memperbarui data kendaraan yang sudah ada.'
+      description: 'Hanya field yang dikirim yang akan diupdate. Foto bersifat opsional.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: multipart/form-data
+      Accept: application/json
+    urlParameters:
+      id:
+        custom: []
+        name: id
+        description: 'ID kendaraan.'
+        required: true
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanUrlParameters:
+      id: 1
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      name:
+        custom: []
+        name: name
+        description: 'optional Nama kendaraan.'
+        required: false
+        example: Jazz
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      brand:
+        custom: []
+        name: brand
+        description: 'optional Merek kendaraan.'
+        required: false
+        example: Honda
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      transmission:
+        custom: []
+        name: transmission
+        description: 'optional Jenis transmisi.'
+        required: false
+        example: Automatic
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      year:
+        custom: []
+        name: year
+        description: 'optional Tahun produksi.'
+        required: false
+        example: 2020
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      plate_number:
+        custom: []
+        name: plate_number
+        description: 'optional Nomor plat (harus unik).'
+        required: false
+        example: B1234ABC
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      gas_type:
+        custom: []
+        name: gas_type
+        description: 'optional Jenis bahan bakar.'
+        required: false
+        example: Pertamax
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      machine_capacity:
+        custom: []
+        name: machine_capacity
+        description: 'optional Kapasitas mesin/muatan.'
+        required: false
+        example: '1500 cc'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      photo:
+        custom: []
+        name: photo
+        description: 'optional Foto kendaraan (jpg, png, jpeg, webp, max 2MB).'
+        required: false
+        example: null
+        type: file
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      longitude:
+        custom: []
+        name: longitude
+        description: 'optional Koordinat bujur.'
+        required: false
+        example: 106.85
+        type: number
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      latitude:
+        custom: []
+        name: latitude
+        description: 'optional Koordinat lintang.'
+        required: false
+        example: -6.2741
+        type: number
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanBodyParameters:
+      name: Jazz
+      brand: Honda
+      transmission: Automatic
+      year: 2020
+      plate_number: B1234ABC
+      gas_type: Pertamax
+      machine_capacity: '1500 cc'
+      longitude: 106.85
+      latitude: -6.2741
+    fileParameters:
+      photo: null
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil update kendaraan!",
+            "vehicle": {
+              "id": 1,
+              "user_id": 1,
+              "name": "Jazz",
+              "brand": "Honda",
+              "year": 2020,
+              "plate_number": "B1234ABC",
+              "photo_path": "vehicles/vehicle_1_20251206100000.jpg",
+              "created_at": "2025-12-06T10:00:00.000000Z",
+              "updated_at": "2025-12-06T10:05:00.000000Z"
+            }
+          }
+        headers: []
+        description: Berhasil
+      -
+        custom: []
+        status: 404
+        content: |-
+          {
+            "message": "Kendaraan tidak ditemukan!"
+          }
+        headers: []
+        description: 'Kendaraan tidak ditemukan'
+      -
+        custom: []
+        status: 422
+        content: |-
+          {
+            "message": "Invalid field",
+            "errors": {
+              "plate_number": ["The plate number has already been taken."]
+            }
+          }
+        headers: []
+        description: 'Validasi gagal'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/vehicles/status
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Mendapatkan status kendaraan untuk dashboard.'
+      description: 'Menampilkan data real-time seperti odometer, kondisi mesin, dll.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil mendapatkan status kendaraan!",
+            "data": {
+              "odometer": 15000,
+              "engine": "1.200",
+              "accumulator": 12.5,
+              "diagnosis": "Normal",
+              "gas_level": 75,
+              "alarm_enabled": true,
+              "remote_engine_cut": false
+            }
+          }
+        headers: []
+        description: Berhasil
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/vehicles/detail
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Mendapatkan detail lengkap kendaraan.'
+      description: 'Termasuk info perangkat (OBD, GPS) yang terpasang.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil mendapatkan detail kendaraan!",
+            "data": {
+              "name": "HondaJazz",
+              "plate_number": "B1234ABC",
+              "year": 2020,
+              "odometer": 15000,
+              "transmission": "Automatic",
+              "gas_type": "Pertamax",
+              "machine_capacity": "1500 cc",
+              "gps": true,
+              "obd": true
+            }
+          }
+        headers: []
+        description: Berhasil
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/vehicles/security
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Mendapatkan seluruh pengaturan keamanan & notifikasi kendaraan pengguna.'
+      description: 'Menggabungkan data dari `vehicle_security_settings` dan `vehicle_notification_triggers`.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil mendapatkan sistem keamanan kendaraan!",
+            "data": {
+              "anti_theft_enabled": true,
+              "geofence_enabled": true,
+              "geofence_radius": 500,
+              "alarm_enabled": true,
+              "remote_engine_cut": false,
+              "engine_on": true,
+              "vibration": true,
+              "wheel_move": false
+            }
+          }
+        headers: []
+        description: Berhasil
+      -
+        custom: []
+        status: 404
+        content: |-
+          {
+            "message": "Kendaraan tidak ditemukan."
+          }
+        headers: []
+        description: 'Kendaraan tidak ditemukan'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/vehicles/security
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Mengaktifkan/menonaktifkan satu fitur keamanan atau notifikasi.'
+      description: 'Kirim **satu field boolean** dalam body request.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      anti_theft_enabled:
+        custom: []
+        name: anti_theft_enabled
+        description: 'optional Aktifkan mode anti-maling.'
+        required: false
+        example: true
+        type: boolean
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      geofence_enabled:
+        custom: []
+        name: geofence_enabled
+        description: 'optional Aktifkan geofencing.'
+        required: false
+        example: true
+        type: boolean
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      alarm_enabled:
+        custom: []
+        name: alarm_enabled
+        description: 'optional Aktifkan alarm.'
+        required: false
+        example: true
+        type: boolean
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      remote_engine_cut:
+        custom: []
+        name: remote_engine_cut
+        description: 'optional Aktifkan remote engine cut.'
+        required: false
+        example: false
+        type: boolean
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      engine_on:
+        custom: []
+        name: engine_on
+        description: 'optional Notifikasi saat mesin menyala.'
+        required: false
+        example: true
+        type: boolean
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      vibration:
+        custom: []
+        name: vibration
+        description: 'optional Notifikasi saat terdeteksi getaran.'
+        required: false
+        example: true
+        type: boolean
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      wheel_move:
+        custom: []
+        name: wheel_move
+        description: 'optional Notifikasi saat roda bergerak.'
+        required: false
+        example: false
+        type: boolean
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanBodyParameters:
+      anti_theft_enabled: true
+      geofence_enabled: true
+      alarm_enabled: true
+      remote_engine_cut: false
+      engine_on: true
+      vibration: true
+      wheel_move: false
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil update keamanan!",
+            "data": {
+              "anti_theft_enabled": true,
+              "geofence_enabled": true,
+              "geofence_radius": 500,
+              "alarm_enabled": true,
+              "remote_engine_cut": false,
+              "engine_on": true,
+              "vibration": true,
+              "wheel_move": false
+            }
+          }
+        headers: []
+        description: Berhasil
+      -
+        custom: []
+        status: 404
+        content: |-
+          {
+            "message": "Kendaraan tidak ditemukan."
+          }
+        headers: []
+        description: 'Kendaraan tidak ditemukan'
+      -
+        custom: []
+        status: 422
+        content: |-
+          {
+            "message": "Field tidak diizinkan untuk diubah."
+          }
+        headers: []
+        description: 'Field tidak valid'
+      -
+        custom: []
+        status: 422
+        content: |-
+          {
+            "message": "Hanya satu field yang boleh diupdate sekaligus."
+          }
+        headers: []
+        description: 'Lebih dari satu field'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/services/schedules
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Mendapatkan jadwal servis yang akan datang.'
+      description: 'Mengembalikan daftar jadwal servis dengan estimasi sisa km.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters:
+      type:
+        custom: []
+        name: type
+        description: 'optional Nama tipe servis.'
+        required: false
+        example: 'Oli Mesin'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanQueryParameters:
+      type: 'Oli Mesin'
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil mendapatkan jadwal servis!",
+            "data": [
+              {
+                "name": "Oli Mesin",
+                "km_target": 2500,
+                "date_target": "2026-01-15",
+                "created_at": "2025-12-01T10:00:00.000000Z"
+              }
+            ]
+          }
+        headers: []
+        description: Berhasil
+      -
+        custom: []
+        status: 422
+        content: |-
+          {
+            "message": "Tipe service tidak valid."
+          }
+        headers: []
+        description: 'Tipe servis tidak valid'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/services
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Mendapatkan riwayat servis pengguna yang sedang login.'
+      description: 'Mengembalikan semua riwayat servis, atau difilter berdasarkan tipe servis.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters:
+      type:
+        custom: []
+        name: type
+        description: 'optional Nama tipe servis (misal: "Oli Mesin"). Jika tidak diisi, kembalikan semua.'
+        required: false
+        example: 'Oli Mesin'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanQueryParameters:
+      type: 'Oli Mesin'
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil mendapatkan riwayat servis!",
+            "data": [
+              {
+                "name": "Oli Mesin",
+                "km": 15000,
+                "total": 250000,
+                "date": "2025-12-01"
+              }
+            ]
+          }
+        headers: []
+        description: Berhasil
+      -
+        custom: []
+        status: 422
+        content: |-
+          {
+            "message": "Tipe service tidak valid."
+          }
+        headers: []
+        description: 'Tipe servis tidak valid'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: 'api/services/{id}'
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Menampilkan detail riwayat servis berdasarkan ID.'
+      description: 'Hanya riwayat servis milik kendaraan pengguna yang sedang login yang dapat dilihat.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      id:
+        custom: []
+        name: id
+        description: 'ID riwayat servis.'
+        required: true
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanUrlParameters:
+      id: 1
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil mendapatkan riwayat servis!",
+            "data": {
+              "id": 1,
+              "service_type_id": 2,
+              "vehicle_id": 5,
+              "date": "2025-12-01",
+              "km": 15000,
+              "description": "Ganti oli mesin",
+              "total": 250000,
+              "created_at": "2025-12-01T10:00:00.000000Z",
+              "updated_at": "2025-12-01T10:00:00.000000Z"
+            }
+          }
+        headers: []
+        description: Berhasil
+      -
+        custom: []
+        status: 403
+        content: |-
+          {
+            "message": "Bukan riwayat servis milik Anda!"
+          }
+        headers: []
+        description: 'Akses ditolak'
+      -
+        custom: []
+        status: 404
+        content: |-
+          {
+            "message": "Riwayat servis tidak ditemukan!"
+          }
+        headers: []
+        description: 'Tidak ditemukan'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/services
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Menambahkan riwayat servis baru.'
+      description: 'Mencatat servis yang telah dilakukan dan memperbarui jadwal servis berikutnya (jika tipe wajib).'
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      service_type_id:
+        custom: []
+        name: service_type_id
+        description: 'ID tipe servis.'
+        required: true
+        example: 2
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      date:
+        custom: []
+        name: date
+        description: 'Tanggal servis (format: YYYY-MM-DD).'
+        required: true
+        example: '2025-12-01'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      km:
+        custom: []
+        name: km
+        description: 'km saat servis.'
+        required: true
+        example: 15000
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      description:
+        custom: []
+        name: description
+        description: 'Deskripsi servis.'
+        required: true
+        example: 'Ganti oli mesin Shell'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+      total:
+        custom: []
+        name: total
+        description: 'Total biaya servis.'
+        required: true
+        example: 250000
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanBodyParameters:
+      service_type_id: 2
+      date: '2025-12-01'
+      km: 15000
+      description: 'Ganti oli mesin Shell'
+      total: 250000
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "message": "Berhasil menambah servis!",
+            "data": {
+              "service_type_id": 2,
+              "vehicle_id": 5,
+              "date": "2025-12-01",
+              "km": 15000,
+              "description": "Ganti oli mesin Shell",
+              "total": 250000,
+              "created_at": "2025-12-01T10:00:00.000000Z",
+              "updated_at": "2025-12-01T10:00:00.000000Z"
+            }
+          }
+        headers: []
+        description: Berhasil
+      -
+        custom: []
+        status: 422
+        content: |-
+          {
+            "message": "Invalid field",
+            "errors": {
+              "km": ["The km must be at least 0."]
+            }
+          }
+        headers: []
+        description: 'Validasi gagal'
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null

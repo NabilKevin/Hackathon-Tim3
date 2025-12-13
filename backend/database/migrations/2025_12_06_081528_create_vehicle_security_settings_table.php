@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('vehicle_security_settings', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('vehicle_id')->constrained()->onDelete('cascade');
+            $table->boolean('anti_theft_enabled')->default(false);
+            $table->boolean('geofence_enabled')->default(false);
+            $table->integer('geofence_radius')->default(100); // dalam meter
+            $table->boolean('alarm_enabled')->default(false);
+            $table->boolean('remote_engine_cut')->default(false);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('vehicle_security_settings');
+    }
+};
