@@ -1,19 +1,86 @@
+import { api } from "@/services/api";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import React from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useColorScheme,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ConnectDevice() {
   const isDark = useColorScheme() === "dark";
   const insets = useSafeAreaInsets();
+
+  const [pairing, setPairing] = React.useState(false);
+  const [connected, setConnected] = React.useState(false);
+  const [loadingStatus, setLoadingStatus] = React.useState(true);
+
+
+  const checkDeviceStatus = async () => {
+    try {
+      const res = await api.post("/devices/status");
+
+      console.log("STATUS CHECK:", res.data);
+
+      const isConnected = Boolean(res.data?.device_connected);
+
+      setConnected(isConnected);
+    } catch (error) {
+      console.log("STATUS ERROR:", error);
+      setConnected(false);
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+  const hasCheckedRef = React.useRef(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (hasCheckedRef.current) return;
+
+      hasCheckedRef.current = true;
+      setLoadingStatus(true);
+      checkDeviceStatus();
+    }, [])
+  );
+
+
+  const handlePingDevice = async () => {
+    if (connected) {
+      Alert.alert("Info", "Perangkat sudah terhubung");
+      return;
+    }
+
+    try {
+      setPairing(true);
+
+      const serialNumber = `SR-${Date.now()}`;
+
+      await api.post("/devices/ping", {
+        device_serial_number: serialNumber,
+      });
+
+      setConnected(true);
+
+      Alert.alert("Berhasil", "Perangkat berhasil terhubung");
+
+      router.replace("/dashboard");
+    } catch (error: any) {
+      Alert.alert(
+        "Gagal",
+        error.response?.data?.message || "Gagal menghubungkan perangkat"
+      );
+    } finally {
+      setPairing(false);
+    }
+  };
+
 
   return (
     <ScrollView
@@ -76,7 +143,9 @@ export default function ConnectDevice() {
           <Text style={[styles.statusLabel, { color: isDark ? "#fff" : "#000" }]}>
             GPS Device
           </Text>
-          <Text style={styles.statusDisconnected}>Belum Terhubung</Text>
+          <Text style={connected ? styles.statusConnected : styles.statusDisconnected}>
+            {connected ? "Terhubung" : "Belum Terhubung"}
+          </Text>
         </View>
 
         <View style={styles.divider} />
@@ -86,20 +155,43 @@ export default function ConnectDevice() {
           <Text style={[styles.statusLabel, { color: isDark ? "#fff" : "#000" }]}>
             OBD Device
           </Text>
-          <Text style={styles.statusDisconnected}>Belum Terhubung</Text>
+          <Text style={connected ? styles.statusConnected : styles.statusDisconnected}>
+            {connected ? "Terhubung" : "Belum Terhubung"}
+          </Text>
         </View>
       </View>
 
       {/* ACTION */}
       <TouchableOpacity
+        onPress={handlePingDevice}
+        disabled={pairing || connected || loadingStatus}
         style={[
           styles.primaryButton,
-          { backgroundColor: isDark ? "#2C6AE8" : "#559CFF" },
+          {
+            backgroundColor:
+              connected
+                ? "#22C55E"
+                : pairing
+                  ? "#94A3B8"
+                  : isDark
+                    ? "#2C6AE8"
+                    : "#559CFF",
+          },
         ]}
       >
-        <Ionicons name="bluetooth-outline" size={20} color="#fff" />
+        <Ionicons
+          name={connected ? "checkmark-circle-outline" : "bluetooth-outline"}
+          size={20}
+          color="#fff"
+        />
         <Text style={styles.primaryButtonText}>
-          Cari & Hubungkan Perangkat
+          {loadingStatus
+            ? "Memeriksa perangkat..."
+            : connected
+              ? "Perangkat Sudah Terhubung"
+              : pairing
+                ? "Menghubungkan..."
+                : "Cari & Hubungkan Perangkat"}
         </Text>
       </TouchableOpacity>
 
@@ -139,6 +231,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     marginBottom: 16,
+  },
+  statusConnected: {
+    fontSize: 12,
+    color: "#22C55E",
+    fontWeight: "600",
   },
   backButton: { marginRight: 8 },
   headerTitle: { fontSize: 22, fontWeight: "700" },

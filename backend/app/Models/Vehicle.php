@@ -16,6 +16,11 @@ class Vehicle extends Model
     {
         return $this->belongsTo(Device::class, 'device_id', 'id');
     }
+    public function devicepairinglogs()
+    {
+        return $this->belongsTo(DevicePairingLog::class, 'device_id', 'id');
+    }
+    
     public function telemetry()
     {
         return $this->hasOne(VehicleTelemetry::class, 'vehicle_id', 'id');
@@ -24,10 +29,11 @@ class Vehicle extends Model
     {
         return $this->hasMany(VehicleGeofence::class, 'vehicle_id', 'id');
     }
-    public function locations()
+    public function location()
     {
-        return $this->hasMany(VehicleLocation::class, 'vehicle_id', 'id');
+        return $this->hasOne(VehicleLocation::class);
     }
+
     public function security()
     {
         return $this->hasOne(VehicleSecuritySetting::class, 'vehicle_id', 'id');

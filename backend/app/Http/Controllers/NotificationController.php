@@ -114,4 +114,42 @@ class NotificationController extends Controller
             'data' => $notification
         ], 200);
     }
+
+    public function latest(Request $request)
+{
+    $userId = Auth::id();
+    $limit = (int) $request->query('limit', 1);
+
+    // Ambil notifikasi terbaru (prioritaskan unread)
+    $notifications = Notification::where('user_id', $userId)
+        ->orderBy('is_read', 'asc') // unread dulu
+        ->latest()
+        ->take($limit)
+        ->get()
+        ->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+                'title' => $notification->title,
+                'content' => $notification->content,
+                'excerpt' => Str::limit($notification->content, 60, '...'),
+                'type' => $notification->type,
+                'is_read' => $notification->is_read,
+                'created_at' => $notification->created_at,
+            ];
+        });
+
+    $hasUnread = Notification::where('user_id', $userId)
+        ->where('is_read', false)
+        ->exists();
+
+    return response()->json([
+        'message' => 'Berhasil mendapatkan notifikasi terkini!',
+        'data' => [
+            'has_unread' => $hasUnread,
+            'notifications' => $notifications
+        ]
+    ], 200);
+}
+
+
 }
