@@ -1,8 +1,10 @@
+import { api } from "@/services/api";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -36,27 +38,63 @@ export default function AddVehicleScreen() {
     }
   };
 
-  const handleSave = () => {
-    if (!vehicleName || !brand || !year || !plate) {
-      alert("Mohon lengkapi semua data wajib!");
-      return;
+  const handleSave = async () => {
+  if (!vehicleName || !brand || !year || !plate) {
+    Alert.alert("Validasi", "Mohon lengkapi semua data wajib!");
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+
+    formData.append("name", vehicleName);
+    formData.append("brand", brand);
+    formData.append("transmission", transmission);
+    formData.append("year", year);
+    formData.append("plate_number", plate);
+    formData.append("gas_type", fuel);
+    formData.append("machine_capacity", engine);
+
+    // Dummy GPS (nanti bisa ambil dari Location API)
+    formData.append("latitude", "-6.2741");
+    formData.append("longitude", "106.85");
+
+    if (image) {
+      formData.append("photo", {
+        uri: image,
+        name: "vehicle.jpg",
+        type: "image/jpeg",
+      } as any);
     }
 
-    const payload = {
-      vehicleName,
-      brand,
-      transmission,
-      year,
-      plate,
-      fuel,
-      engine,
-      image,
-    };
+    await api.post("/vehicles", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
-    console.log("KIRIM DATA:", payload);
-    alert("Kendaraan berhasil disimpan!");
-    router.push("/dashboard");
-  };
+    Alert.alert("Berhasil", "Kendaraan Berhasil ditambah!");
+
+    // Setelah kendaraan dibuat → cek pairing
+    try {
+      const telemetry = await api.get("/vehicles/telemetry");
+
+      if (!telemetry.data?.device_id) {
+        router.replace("/(tabs)/vehicles/connect-device");
+      } else {
+        router.replace("/dashboard");
+      }
+    } catch {
+      router.replace("/(tabs)/vehicles/connect-device");
+    }
+
+  } catch (error: any) {
+    Alert.alert(
+      "Gagal",
+      error.response?.data?.message || "Gagal menambahkan kendaraan"
+    );
+  }
+};
 
   return (
     <ScrollView

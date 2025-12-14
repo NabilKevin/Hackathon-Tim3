@@ -1,7 +1,11 @@
+import { api } from "@/services/api";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router } from "expo-router";
+import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +17,64 @@ import {
 export default function Register() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
+
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!username || !email || !password || !passwordConfirmation) {
+      Alert.alert("Error", "Semua field wajib diisi");
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      Alert.alert("Error", "Konfirmasi password tidak sama");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await api.post("/register", {
+        username,
+        email,
+        password,
+        password_confirmation: passwordConfirmation,
+      });
+
+      Alert.alert(
+        "Berhasil",
+        "Registrasi berhasil, silakan login",
+        [
+          {
+            text: "OK",
+            onPress: () => router.replace("/login"),
+          },
+        ]
+      );
+    } catch (error: any) {
+      if (error.response?.status === 422) {
+        const errors = error.response.data.errors;
+
+        const messages = Object.values(errors)
+          .flat()
+          .join("\n");
+
+        Alert.alert("Validasi Gagal", messages);
+      } else {
+        Alert.alert(
+          "Gagal",
+          error.response?.data?.message || "Terjadi kesalahan server"
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <View
@@ -35,6 +97,8 @@ export default function Register() {
           Username
         </Text>
         <TextInput
+          value={username}
+          onChangeText={setUsername}
           style={[
             styles.input,
             {
@@ -53,6 +117,10 @@ export default function Register() {
           Email
         </Text>
         <TextInput
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
           style={[
             styles.input,
             {
@@ -72,6 +140,8 @@ export default function Register() {
         </Text>
         <TextInput
           secureTextEntry
+          value={password}
+          onChangeText={setPassword}
           style={[
             styles.input,
             {
@@ -91,6 +161,8 @@ export default function Register() {
         </Text>
         <TextInput
           secureTextEntry
+          value={passwordConfirmation}
+          onChangeText={setPasswordConfirmation}
           style={[
             styles.input,
             {
@@ -104,8 +176,16 @@ export default function Register() {
         />
       </View>
 
-      <TouchableOpacity style={styles.primaryBtn}>
-        <Text style={styles.primaryBtnText}>Daftar</Text>
+      <TouchableOpacity
+        style={styles.primaryBtn}
+        onPress={handleRegister}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.primaryBtnText}>Daftar</Text>
+        )}
       </TouchableOpacity>
 
       <Text

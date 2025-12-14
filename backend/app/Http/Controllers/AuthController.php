@@ -65,7 +65,7 @@ class AuthController extends Controller
         }
 
         $user = User::firstWhere('email', $data['email']);
-        $token = $user->createToken('user_login')->plainTextToken;
+        $token = $user->createToken('mobile')->plainTextToken;
 
         return response()->json([
             'message' => 'Berhasil Login!',
@@ -144,7 +144,7 @@ class AuthController extends Controller
         $user = User::create($data);
 
         return response()->json([
-            'message' => 'Register berhasil!',
+            'message' => 'Register berhasil! silahkan login',
             'user' => $user
         ], 200);
     }

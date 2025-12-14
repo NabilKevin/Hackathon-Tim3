@@ -1,3 +1,4 @@
+import { api } from "@/services/api";
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
@@ -18,8 +19,47 @@ export default function HomeScreen() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
 
-  
+  const [vehicleName, setVehicleName] = useState<string>("");
+  const [telemetry, setTelemetry] = useState<any>(null);
+  const [security, setSecurity] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const fetchVehicleStatus = async () => {
+    try {
+      const res = await api.get("/vehicles/status");
 
+      const data = res.data.data;
+
+      setVehicleName(data.vehicle.name);
+
+      const lat = parseFloat(data.vehicle.latitude);
+      const lng = parseFloat(data.vehicle.longitude);
+
+      setRegion({
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+
+      setTelemetry(data.telemetry);
+      setSecurity(data.security);
+    } catch (error) {
+      console.log("FETCH VEHICLE STATUS ERROR:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        alert("Izin lokasi ditolak");
+        return;
+      }
+
+      await fetchVehicleStatus();
+    })();
+  }, []);
   async function goToMyLocation() {
     try {
       const loc = await Location.getCurrentPositionAsync({});
@@ -37,25 +77,10 @@ export default function HomeScreen() {
       alert("Tidak dapat mengambil lokasi");
     }
   }
-
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== "granted") {
-        alert("Izin lokasi ditolak");
-        return;
-      }
-
-      const loc = await Location.getCurrentPositionAsync({});
-      setRegion({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
-    })();
-  }, []);
+useEffect(() => {
+  const interval = setInterval(fetchVehicleStatus, 10000);
+  return () => clearInterval(interval);
+}, []);
 
   return (
     <ScrollView
@@ -94,7 +119,7 @@ export default function HomeScreen() {
               { color: isDark ? "#fff" : "#111827" },
             ]}
           >
-            Honda Vario 150
+            {vehicleName || "-"}
           </Text>
         </View>
 
@@ -103,7 +128,7 @@ export default function HomeScreen() {
             styles.headerIcon,
             { backgroundColor: isDark ? "#374151" : "#E5E7EB" },
           ]}
-          onPress={() => {router.push("/(tabs)/dashboard/notification")}}
+          onPress={() => { router.push("/(tabs)/dashboard/notification") }}
         >
           <Ionicons
             name="notifications-outline"
@@ -121,7 +146,7 @@ export default function HomeScreen() {
             style={styles.map}
             region={region}
           >
-            
+
             <Marker coordinate={region}>
               <View
                 style={{
@@ -193,21 +218,34 @@ export default function HomeScreen() {
       </Text>
 
       <View style={styles.statusGrid}>
-        {renderStatusCard("ODOMETER", "12,450 km", isDark, (
+        {renderStatusCard(
+          "ODOMETER",
+          telemetry ? `${telemetry.odometer} km` : "-",
+          isDark,
           <MaterialCommunityIcons name="counter" size={20} color="#3B82F6" />
-        ))}
+        )}
 
-        {renderStatusCard("ENGINE", "1,200 rpm", isDark, (
+        {renderStatusCard(
+          "ENGINE",
+          telemetry ? `${telemetry.rpm} rpm` : "-",
+          isDark,
           <FontAwesome5 name="tachometer-alt" size={20} color="#3B82F6" />
-        ))}
+        )}
 
-        {renderStatusCard("AKI", "12.4 v", isDark, (
+        {renderStatusCard(
+          "AKI",
+          telemetry ? `${telemetry.battery} v` : "-",
+          isDark,
           <Ionicons name="battery-half" size={20} color="#F59E0B" />
-        ))}
+        )}
 
-        {renderStatusCard("DIAGNOSA", "Normal", isDark, (
-          <MaterialCommunityIcons name="heart-pulse" size={20} color="#10B981" />
-        ), "#10B981")}
+        {renderStatusCard(
+          "DIAGNOSA",
+          "Normal",
+          isDark,
+          <MaterialCommunityIcons name="heart-pulse" size={20} color="#10B981" />,
+          "#10B981"
+        )}
       </View>
 
       <View
@@ -238,7 +276,7 @@ export default function HomeScreen() {
               { color: isDark ? "#fff" : "#111" },
             ]}
           >
-            80%
+            {telemetry ? `${telemetry.fuel}%` : "-"}
           </Text>
         </View>
 

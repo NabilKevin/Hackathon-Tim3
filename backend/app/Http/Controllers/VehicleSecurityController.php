@@ -6,9 +6,10 @@ use App\Models\Vehicle;
 use App\Models\VehicleNotificationTrigger;
 use App\Models\VehicleSecuritySetting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
+
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
+
+use App\Http\Services\VehicleSecurityService;
 
 class VehicleSecurityController extends Controller
 {
@@ -39,20 +40,32 @@ class VehicleSecurityController extends Controller
      */
     public function index()
     {
-        $user = Auth::user();
-        $vehicle = Vehicle::firstWhere('user_id', $user->id);
-        $security = VehicleSecuritySetting::firstWhere('vehicle_id', $vehicle->id);
-        $notifTrigger = VehicleNotificationTrigger::firstWhere('vehicle_id', $vehicle->id);
+        $vehicle = Vehicle::firstWhere('user_id', Auth::id());
 
-        $data = array_merge(
-            $security->toArray(),
-            $notifTrigger->toArray()
-        );
+        if (!$vehicle) {
+            return response()->json(['message' => 'Kendaraan tidak ditemukan.'], 404);
+        }
+
+        $security = VehicleSecuritySetting::firstWhere('vehicle_id', $vehicle->id);
+        $trigger  = VehicleNotificationTrigger::firstWhere('vehicle_id', $vehicle->id);
 
         return response()->json([
             'message' => 'Berhasil mendapatkan sistem keamanan kendaraan!',
-            'data' => $data
-        ], 200);
+            'data' => array_merge(
+                $security->only([
+                    'anti_theft_enabled',
+                    'geofence_enabled',
+                    'geofence_radius',
+                    'alarm_enabled',
+                    'remote_engine_cut'
+                ]),
+                $trigger->only([
+                    'engine_on',
+                    'vibration',
+                    'wheel_move'
+                ])
+            )
+        ]);
     }
 
     /**
@@ -98,44 +111,73 @@ class VehicleSecurityController extends Controller
      */
     public function toggleSecurity(Request $request)
     {
-        $user = Auth::user();
-        $vehicle = Vehicle::firstWhere('user_id', $user->id);
+        $vehicle = Vehicle::firstWhere('user_id', Auth::id());
 
-        $security = VehicleSecuritySetting::firstWhere('vehicle_id', $vehicle->id);
-        $notifTrigger = VehicleNotificationTrigger::firstWhere('vehicle_id', $vehicle->id);
+        if (!$vehicle) {
+            return response()->json(['message' => 'Kendaraan tidak ditemukan'], 404);
+        }
+
+        // Pastikan hanya 1 field
+        if (count($request->all()) !== 1) {
+            return response()->json([
+                'message' => 'Hanya satu field yang boleh diupdate'
+            ], 422);
+        }
 
         $field = array_key_first($request->all());
-        $value = $request->input($field);
+        $value = filter_var($request->input($field), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
 
-        $hidden = ['id', 'vehicle_id', 'created_at', 'updated_at'];
-
-        // Gabungkan attribute kedua model
-        $securityFields = Arr::except($security->getAttributes(), $hidden);
-        $notifFields = Arr::except($notifTrigger->getAttributes(), $hidden);
-
-        // Cek field valid
-        if (!array_key_exists($field, $securityFields) && !array_key_exists($field, $notifFields)) {
-            return response()->json(['message' => 'Invalid field'], 422);
+        if ($value === null) {
+            return response()->json(['message' => 'Nilai harus boolean'], 422);
         }
 
-        // Validasi nilai boolean (support "true"/"false" string)
-        $boolValue = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        $security = VehicleSecuritySetting::firstWhere('vehicle_id', $vehicle->id);
+        $trigger  = VehicleNotificationTrigger::firstWhere('vehicle_id', $vehicle->id);
 
-        if ($boolValue === null) {
-            return response()->json(['message' => 'Nilai harus berupa boolean'], 422);
+        /* ================= UPDATE SETTING ================= */
+
+        if ($security->isFillable($field)) {
+            $security->update([$field => $value]);
+
+            // === Aksi langsung (IoT Simulation) ===
+            if ($field === 'remote_engine_cut' && $value === true) {
+                VehicleSecurityService::handleEvent($vehicle, 'wheel_move');
+            }
+
+            if ($field === 'alarm_enabled' && $value === true) {
+                VehicleSecurityService::handleEvent($vehicle, 'vibration');
+            }
+        } elseif ($trigger->isFillable($field)) {
+            $trigger->update([$field => $value]);
+        } else {
+            return response()->json(['message' => 'Field tidak valid'], 422);
         }
-
-        // Tentukan target model
-        $target = array_key_exists($field, $securityFields) ? $security : $notifTrigger;
-
-        // Update langsung
-        $target->update([$field => $boolValue]);
 
         return response()->json([
-            'message' => 'Berhasil update keamanan!',
-            'field' => $field,
-            'value' => $boolValue
+            'message' => 'Keamanan berhasil diperbarui',
+            'field'   => $field,
+            'value'   => $value
         ]);
     }
+
+    public function simulateEvent(Request $request)
+{
+    $request->validate([
+        'event' => 'required|in:engine_on,vibration,wheel_move'
+    ]);
+
+    $vehicle = Vehicle::firstWhere('user_id', Auth::id());
+
+    if (!$vehicle) {
+        return response()->json(['message' => 'Kendaraan tidak ditemukan'], 404);
+    }
+
+    VehicleSecurityService::handleEvent($vehicle, $request->event);
+
+    return response()->json([
+        'message' => 'Event berhasil disimulasikan',
+        'event' => $request->event
+    ]);
+}
 
 }

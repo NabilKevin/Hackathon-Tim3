@@ -1,12 +1,68 @@
+import { api } from "@/services/api";
+import { saveToken } from "@/services/auth";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from "expo-router";
-import { StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from "react-native";
-
+import { useState } from "react";
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from "react-native";
 export default function Login() {
 
   const theme = useColorScheme();
   const isDark = theme === "dark";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    try {
+      setLoading(true);
+
+      const res = await api.post("/login", {
+        email,
+        password,
+      });
+
+      const token = res.data.token;
+      await saveToken(token);
+
+      Alert.alert("Login Berhasil!");
+
+      // 1️⃣ Cek apakah user punya kendaraan
+
+      // 3. Cek kendaraan
+      // 1️⃣ CEK KENDARAAN
+      try {
+        await api.get("/vehicles/detail");
+      } catch {
+        router.replace("/add-vehicle");
+        return;
+      }
+
+      // 2️⃣ CEK DEVICE (TIDAK BOLEH NYERET KE ADD VEHICLE)
+      try {
+        const status = await api.post("/devices/status");
+
+        if (!status.data.device_connected) {
+          router.replace("/(tabs)/vehicles/connect-device");
+        } else {
+          router.replace("/dashboard");
+        }
+
+      } catch {
+        // jika device status error → anggap belum connect
+        router.replace("/(tabs)/vehicles/connect-device");
+      }
+
+    } catch (error: any) {
+      Alert.alert(
+        "Login gagal",
+        error.response?.data?.message || "Email atau password salah"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View
@@ -40,6 +96,8 @@ export default function Login() {
           Email
         </Text>
         <TextInput
+          value={email}
+          onChangeText={setEmail}
           style={[
             styles.input,
             {
@@ -67,14 +125,14 @@ export default function Login() {
               color: isDark ? "#FFFFFF" : "#111827",
             },
           ]}
-          secureTextEntry
+          value={password} onChangeText={setPassword} secureTextEntry
           placeholder="Masukkan Kata Sandi"
           placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
         />
       </View>
 
       {/* Tombol Login */}
-      <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push("/dashboard")}>
+      <TouchableOpacity style={styles.primaryBtn} onPress={handleLogin}>
         <Text style={styles.primaryBtnText}>Masuk Sekarang</Text>
       </TouchableOpacity>
 
