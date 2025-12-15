@@ -23,6 +23,7 @@ export const getUser = async () => {
 }
 
 export const updateUser = async (token: string, data: any) => {
+  
   const response = await api.put("/update-profile", data, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -30,4 +31,6 @@ export const updateUser = async (token: string, data: any) => {
       // "Content-Type": "multipart/form-data",
     },
   });
+  
+  saveUser(response.data.user);
 }

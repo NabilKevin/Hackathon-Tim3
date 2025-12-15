@@ -24,6 +24,8 @@ export default function Account() {
 
   const fetchData = async () => {
     const data = await getUser();
+    console.log(data);
+    
     setUser(data);
   }
 
