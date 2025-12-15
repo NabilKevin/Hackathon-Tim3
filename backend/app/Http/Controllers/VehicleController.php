@@ -26,9 +26,6 @@ class VehicleController extends Controller
         return $file->storeAs('vehicles', $fileName, 'public');
     }
 
-    /**
-     * CREATE VEHICLE (ONBOARDING)
-     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -54,8 +51,14 @@ class VehicleController extends Controller
         $user = $request->user();
         $data = $validator->validated();
 
-        DB::transaction(function () use ($data, $user, $request) {
+        /** 
+         * ==============================
+         * TRANSACTION DATABASE ONLY
+         * ==============================
+         */
+        DB::beginTransaction();
 
+        try {
             $photoPath = $this->uploadFile($request->file('photo'), $user->id);
 
             $vehicle = Vehicle::create([
@@ -70,7 +73,7 @@ class VehicleController extends Controller
             VehicleTelemetry::create([
                 'vehicle_id' => $vehicle->id,
                 'odometer' => 0,
-                'accumulator' => 12.6, // simulasi aki hidup
+                'accumulator' => 12.6,
                 'transmission' => $data['transmission'],
                 'gas_level' => 100,
                 'gas_type' => $data['gas_type'],
@@ -94,78 +97,109 @@ class VehicleController extends Controller
                 'longitude' => $data['longitude'],
             ]);
 
-            ServiceType::where('category', 'required')->each(function ($service) use ($vehicle, $user) {
-                ServiceSchedule::create([
-                    'user_id' => $user->id,
-                    'vehicle_id' => $vehicle->id,
-                    'service_type_id' => $service->id,
-                    'km_target' => $service->interval_km,
-                    'date_target' => Carbon::now()->addDays($service->interval_km / 50)->toDateString(),
-                ]);
-            });
+            ServiceType::where('category', 'required')
+                ->each(function ($service) use ($vehicle, $user) {
+                    ServiceSchedule::create([
+                        'user_id' => $user->id,
+                        'vehicle_id' => $vehicle->id,
+                        'service_type_id' => $service->id,
+                        'km_target' => $service->interval_km,
+                        'date_target' => Carbon::now()
+                            ->addDays($service->interval_km / 50)
+                            ->toDateString(),
+                    ]);
+                });
 
-            createNotification(
-                $user->id,
-                $vehicle->id,
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal membuat kendaraan',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+        /**
+         * ==============================
+         * NOTIFICATION (OUTSIDE TRANSACTION)
+         * ==============================
+         */
+
+        createNotification(
+            $user->id,
+            $vehicle->id,
+            'Kendaraan berhasil ditambahkan',
+            'Silakan hubungkan perangkat untuk mengaktifkan fitur keamanan.',
+            'system'
+        );
+
+        if (!empty($user->expo_push_token)) {
+            sendExpoPush(
+                $user->expo_push_token,
                 'Kendaraan berhasil ditambahkan',
                 'Silakan hubungkan perangkat untuk mengaktifkan fitur keamanan.',
-                'system'
+                [
+                    'type' => 'system',
+                    'vehicle_id' => $vehicle->id
+                ]
             );
-        });
+        }
 
         return response()->json([
-            'message' => 'Berhasil membuat kendaraan'
-        ]);
+            'message' => 'Berhasil membuat kendaraan',
+            'vehicle_id' => $vehicle->id
+        ], 201);
     }
+
 
     /**
      * VEHICLE STATUS (DASHBOARD + IOT READY)
      */
     public function vehicleStatus()
-{
-    $user = Auth::user();
-    $vehicle = Vehicle::where('user_id', $user->id)
-        ->with(['telemetry', 'location', 'security'])
-        ->first();
+    {
+        $user = Auth::user();
+        $vehicle = Vehicle::where('user_id', $user->id)
+            ->with(['telemetry', 'location', 'security'])
+            ->first();
 
-    if (!$vehicle) {
+        if (!$vehicle) {
+            return response()->json([
+                'message' => 'Kendaraan belum tersedia'
+            ], 404);
+        }
+
+        $deviceConnected = DevicePairingLog::where('vehicle_id', $vehicle->id)
+            ->where('action', 'paired')
+            ->exists();
+
+        if (!$deviceConnected) {
+            return response()->json([
+                'message' => 'Device belum terhubung'
+            ], 409);
+        }
+
         return response()->json([
-            'message' => 'Kendaraan belum tersedia'
-        ], 404);
-    }
-
-    $deviceConnected = DevicePairingLog::where('vehicle_id', $vehicle->id)
-        ->where('action', 'paired')
-        ->exists();
-
-    if (!$deviceConnected) {
-        return response()->json([
-            'message' => 'Device belum terhubung'
-        ], 409);
-    }
-
-    return response()->json([
-        'message' => 'Berhasil mendapatkan status kendaraan',
-        'data' => [
-            'vehicle' => [
-                'name' => "{$vehicle->brand} {$vehicle->name}",
-                'latitude' => $vehicle->location->latitude,
-                'longitude' => $vehicle->location->longitude,
-            ],
-            'telemetry' => [
-                'odometer' => $vehicle->telemetry->odometer,
-                'rpm' => rand(800, 3000), // simulasi
-                'battery' => $vehicle->telemetry->accumulator,
-                'fuel' => $vehicle->telemetry->gas_level,
-            ],
-            'security' => [
-                'alarm_enabled' => (bool) $vehicle->security->alarm_enabled,
-                'remote_engine_cut' => (bool) $vehicle->security->remote_engine_cut,
-                'anti_theft_enabled' => (bool) $vehicle->security->anti_theft_enabled,
+            'message' => 'Berhasil mendapatkan status kendaraan',
+            'data' => [
+                'vehicle' => [
+                    'name' => "{$vehicle->brand} {$vehicle->name}",
+                    'latitude' => $vehicle->location->latitude,
+                    'longitude' => $vehicle->location->longitude,
+                ],
+                'telemetry' => [
+                    'odometer' => $vehicle->telemetry->odometer,
+                    'rpm' => rand(800, 3000), // simulasi
+                    'battery' => $vehicle->telemetry->accumulator,
+                    'fuel' => $vehicle->telemetry->gas_level,
+                ],
+                'security' => [
+                    'alarm_enabled' => (bool) $vehicle->security->alarm_enabled,
+                    'remote_engine_cut' => (bool) $vehicle->security->remote_engine_cut,
+                    'anti_theft_enabled' => (bool) $vehicle->security->anti_theft_enabled,
+                ]
             ]
-        ]
-    ]);
-}
+        ]);
+    }
 
     /**
      * VEHICLE DETAIL (PROFILE + DEVICE)
@@ -234,5 +268,4 @@ class VehicleController extends Controller
             'message' => 'Device berhasil terhubung'
         ]);
     }
-    
 }

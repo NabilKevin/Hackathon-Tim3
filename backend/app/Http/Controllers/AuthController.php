@@ -74,6 +74,22 @@ class AuthController extends Controller
         ], 200);
     }
 
+    public function savePushToken(Request $request)
+{
+    $request->validate([
+        'expo_push_token' => 'required|string'
+    ]);
+
+    $request->user()->update([
+        'expo_push_token' => $request->expo_push_token
+    ]);
+
+    return response()->json([
+        'message' => 'Push token saved'
+    ]);
+}
+
+
     /**
      * Logout pengguna.
      *

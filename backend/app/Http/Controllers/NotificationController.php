@@ -37,7 +37,7 @@ class NotificationController extends Controller
     {
         $type = $request->query('type', 'all');
 
-        $validTypes = ['security', 'service', 'system', 'warning'];
+        $validTypes = ['security', 'service', 'system', 'warning','device'];
         if ($type !== 'all' && !in_array($type, $validTypes)) {
             return response()->json([
                 'message' => 'Tipe notifikasi tidak valid.'
@@ -117,38 +117,41 @@ class NotificationController extends Controller
 
     public function latest(Request $request)
 {
-    $userId = Auth::id();
-    $limit = (int) $request->query('limit', 1);
+    $type  = $request->query('type', 'all');
+    $limit = $request->query('limit'); // 🔥 tambahan
 
-    // Ambil notifikasi terbaru (prioritaskan unread)
-    $notifications = Notification::where('user_id', $userId)
-        ->orderBy('is_read', 'asc') // unread dulu
-        ->latest()
-        ->take($limit)
-        ->get()
-        ->map(function ($notification) {
-            return [
-                'id' => $notification->id,
-                'title' => $notification->title,
-                'content' => $notification->content,
-                'excerpt' => Str::limit($notification->content, 60, '...'),
-                'type' => $notification->type,
-                'is_read' => $notification->is_read,
-                'created_at' => $notification->created_at,
-            ];
-        });
+    $validTypes = ['security', 'service', 'system', 'warning'];
+    if ($type !== 'all' && !in_array($type, $validTypes)) {
+        return response()->json([
+            'message' => 'Tipe notifikasi tidak valid.'
+        ], 422);
+    }
 
-    $hasUnread = Notification::where('user_id', $userId)
-        ->where('is_read', false)
-        ->exists();
+    $query = \App\Models\Notification::orderBy('created_at', 'desc');
+
+    // 🔎 filter type
+    if ($type !== 'all') {
+        $query->where('type', $type);
+    }
+
+    // 🔥 LIMIT (untuk notifikasi terkini)
+    if ($limit && is_numeric($limit)) {
+        $query->limit((int) $limit);
+    }
+
+    $notifications = $query->get([
+        'id',
+        'title',
+        'excerpt',
+        'is_read',
+        'type',
+        'created_at'
+    ]);
 
     return response()->json([
-        'message' => 'Berhasil mendapatkan notifikasi terkini!',
-        'data' => [
-            'has_unread' => $hasUnread,
-            'notifications' => $notifications
-        ]
-    ], 200);
+        'message' => 'Berhasil mendapatkan notifikasi!',
+        'data' => $notifications
+    ]);
 }
 
 

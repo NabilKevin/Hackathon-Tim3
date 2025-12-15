@@ -14,6 +14,27 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  // const notificationListener = useRef<Notifications.Subscription | null>(null);
+  // const responseListener = useRef<Notifications.Subscription | null>(null);
+
+  // useEffect(() => {
+  //   registerForPushNotificationsAsync();
+
+  //   notificationListener.current =
+  //     Notifications.addNotificationReceivedListener(notification => {
+  //       console.log("🔔 NOTIF MASUK:", notification);
+  //     });
+
+  //   responseListener.current =
+  //     Notifications.addNotificationResponseReceivedListener(response => {
+  //       console.log("👉 NOTIF DI KLIK:", response);
+  //     });
+
+  //   return () => {
+  //     notificationListener.current?.remove();
+  //     responseListener.current?.remove();
+  //   };
+  // }, []);
 
   return (
     <SafeAreaProvider>
@@ -30,7 +51,6 @@ export default function RootLayout() {
             backgroundColor: isDark ? "black" : "white"
           }}
         >
-          {/* Theme Provider harus memiliki theme */}
           <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="splash" />
@@ -38,7 +58,6 @@ export default function RootLayout() {
               <Stack.Screen name="register" />
             </Stack>
           </ThemeProvider>
-
         </SafeAreaView>
       </GestureHandlerRootView>
     </SafeAreaProvider>

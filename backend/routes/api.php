@@ -15,7 +15,7 @@ use App\Http\Controllers\RealtimeController;
 //     return $request->user();
 // })->middleware('auth:sanctum');
 
-Route::middleware('guest')->group(function() {
+Route::middleware('guest')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('register', [AuthController::class, 'register']);
     Route::post('realtime/demo', [RealtimeController::class, 'demo']);
@@ -23,14 +23,19 @@ Route::middleware('guest')->group(function() {
 
 Route::middleware('auth:sanctum')->group(function () {
 
+    Route::post('users/push-token', [AuthController::class, 'savePushToken']);
+
     Route::post('logout', [AuthController::class, 'logout']);
     Route::put('update-profile', [AuthController::class, 'update']);
 
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
         Route::get('{id}', [NotificationController::class, 'show']);
-        Route::get('/notifications/latest', [NotificationController::class, 'latest']);
+        Route::get('/latest', [NotificationController::class, 'latest']);
     });
+
+
+
 
     Route::middleware(hasNoVehicle::class)->group(function () {
         Route::post('vehicles', [VehicleController::class, 'store']);
@@ -51,8 +56,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
             // Security
             Route::get('security', [VehicleSecurityController::class, 'index']);
-            Route::post('security', [VehicleSecurityController::class, 'toggleSecurity']);
+            Route::post('security/toggle', [VehicleSecurityController::class, 'toggleSecurity']);
 
+            // 🚗 VEHICLE ACTIONS
+            Route::post('alarm/on', [VehicleSecurityController::class, 'alarmOn']);
+            Route::post('alarm/off', [VehicleSecurityController::class, 'alarmOff']);
+            Route::post('engine/off', [VehicleSecurityController::class, 'engineOff']);
             // IoT Event Simulation
             Route::post('simulate-event', [VehicleSecurityController::class, 'simulateEvent']);
         });

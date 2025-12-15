@@ -1,5 +1,6 @@
+import { api } from "@/services/api";
 import { Fontisto, MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { TouchableOpacity, useColorScheme } from "react-native";
 
 import {
@@ -13,17 +14,50 @@ import {
 
 export default function SecurityScreen() {
   const colorScheme = useColorScheme();
-    const isDark = colorScheme === "dark";
+  const isDark = colorScheme === "dark";
 
-  const [antiTheft, setAntiTheft] = useState(true);
-  const [geofence, setGeofence] = useState(true);
+  const [security, setSecurity] = useState({
+    anti_theft_enabled: false,
+    geofence_enabled: false,
+    geofence_radius: 500,
+    alarm_enabled: false,
+    remote_engine_cut: false,
+    engine_on: false,
+    vibration: false,
+    wheel_move: false,
+  });
 
-  const [trigMesin, setTrigMesin] = useState(true);
-  const [trigGetaran, setTrigGetaran] = useState(true);
-  const [trigRoda, setTrigRoda] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const [matikanMesin, setMatikanMesin] = useState(false);
-  const [alarmAktif, setAlarmAktif] = useState(true);
+  useEffect(() => {
+    fetchSecurity();
+  }, []);
+
+  const fetchSecurity = async () => {
+    try {
+      const res = await api.get("/vehicles/security");
+      setSecurity(res.data.data);
+    } catch (e) {
+      console.log("Gagal load security", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleSecurity = async (field: keyof typeof security, value: boolean) => {
+    try {
+      // Optimistic UI
+      setSecurity(prev => ({ ...prev, [field]: value }));
+
+      await api.post("/vehicles/security/toggle", {
+        [field]: value,
+      });
+    } catch (e) {
+      console.log("Gagal update", field);
+      // rollback
+      setSecurity(prev => ({ ...prev, [field]: !value }));
+    }
+  };
 
   const theme = {
     background: isDark ? "#0C0F14" : "#F6F8FC",
@@ -57,8 +91,8 @@ export default function SecurityScreen() {
           </View>
           <Switch
             style={{ marginLeft: 50 }}
-            value={antiTheft}
-            onValueChange={setAntiTheft}
+            value={security.anti_theft_enabled}
+            onValueChange={(v) => toggleSecurity("anti_theft_enabled", v)}
             trackColor={{ true: "#00C4C4" }}
           />
         </View>
@@ -77,8 +111,8 @@ export default function SecurityScreen() {
           </View>
           <Switch
             style={{ marginLeft: 100 }}
-            value={geofence}
-            onValueChange={setGeofence}
+            value={security.geofence_enabled}
+            onValueChange={(v) => toggleSecurity("geofence_enabled", v)}
             trackColor={{ true: "#00C4C4" }}
           />
 
@@ -89,7 +123,7 @@ export default function SecurityScreen() {
         <View style={styles.sliderBar}>
           <View style={styles.sliderFill} />
         </View>
-        <Text style={[styles.radiusText, { color: theme.subtext }]}>Radius: 500m</Text>
+        <Text style={[styles.radiusText, { color: theme.subtext }]}>Radius: {security.geofence_radius}m</Text>
       </View>
 
       {/* Notification Trigger */}
@@ -98,9 +132,18 @@ export default function SecurityScreen() {
       </Text>
 
       <View style={[styles.card, { backgroundColor: theme.card }]}>
-        <TriggerItem label="Mesin Menyala" value={trigMesin} onToggle={() => setTrigMesin(!trigMesin)} theme={theme} />
-        <TriggerItem label="Getaran / Guncangan" value={trigGetaran} onToggle={() => setTrigGetaran(!trigGetaran)} theme={theme} />
-        <TriggerItem label="Pergerakan Roda" value={trigRoda} onToggle={() => setTrigRoda(!trigRoda)} theme={theme} />
+        <TriggerItem label="Mesin Menyala" value={security.engine_on}
+          onToggle={() =>
+            toggleSecurity("engine_on", !security.engine_on)
+          } theme={theme} />
+        <TriggerItem label="Getaran / Guncangan" value={security.vibration}
+          onToggle={() =>
+            toggleSecurity("vibration", !security.vibration)
+          } theme={theme} />
+        <TriggerItem label="Pergerakan Roda" value={security.wheel_move}
+          onToggle={() =>
+            toggleSecurity("wheel_move", !security.wheel_move)
+          } theme={theme} />
 
       </View>
 
@@ -112,8 +155,10 @@ export default function SecurityScreen() {
       <View style={[styles.card, { backgroundColor: theme.card }]}>
         <ControlItem
           label="Matikan Mesin"
-          value={matikanMesin}
-          onToggle={() => setMatikanMesin(!matikanMesin)}
+          value={security.remote_engine_cut}
+          onToggle={(v) =>
+            toggleSecurity("remote_engine_cut", v ?? false)
+          }
           theme={theme}
           icon="engine-off"
           iconColor="#FF4D4D"
@@ -123,8 +168,10 @@ export default function SecurityScreen() {
 
         <ControlItem
           label="Alarm Aktif"
-          value={alarmAktif}
-          onToggle={() => setAlarmAktif(!alarmAktif)}
+          value={security.alarm_enabled}
+          onToggle={(v) =>
+            toggleSecurity("alarm_enabled", v ?? false)
+          }
           theme={theme}
           icon="alarm-light"
           iconColor="#4DA1FF"
@@ -154,7 +201,7 @@ type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 interface ControlItemProps {
   label: string;
   value: boolean;
-  onToggle: () => void;
+  onToggle: (value?: boolean) => Promise<void>;
   theme: any;
   toggle?: boolean;
   icon: IconName;
@@ -257,13 +304,13 @@ const styles = StyleSheet.create({
   },
 
   iconWrapper: {
-  width: 40,
-  height: 40,
-  borderRadius: 50,
-  marginRight: 15,
-  justifyContent: "center",
-  alignItems: "center",
-},
+    width: 40,
+    height: 40,
+    borderRadius: 50,
+    marginRight: 15,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
 
   card: {
