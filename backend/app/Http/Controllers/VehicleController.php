@@ -13,6 +13,7 @@ use App\Models\VehicleTelemetry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -115,6 +116,7 @@ class VehicleController extends Controller
         return response()->json([
             'message' => 'Berhasil membuat kendaraan!'
         ], 200);
+        });
     }
 
     /**
@@ -163,14 +165,21 @@ class VehicleController extends Controller
      *   }
      * }
      */
-    public function update(Request $request, $id)
+    public function update(Request $request)
     {
-        $vehicle = Vehicle::find($id);
+        $user = $request->user();
+        $vehicle = Vehicle::firstWhere('user_id', $user->id);
 
         if (!$vehicle) {
             return response()->json([
                 'message' => 'Kendaraan tidak ditemukan!'
             ], 404);
+        }
+
+        if($vehicle->user_id !== $user->id) {
+            return response()->json([
+                'message' => 'Bukan kendaraan anda!'
+            ], 403);
         }
 
         // Validasi
@@ -179,7 +188,7 @@ class VehicleController extends Controller
             'brand' => 'sometimes|string',
             'transmission' => 'sometimes|string',
             'year' => 'sometimes|integer|min:1900|max:' . now()->year,
-            'plate_number' => 'sometimes|unique:vehicles,plate_number,' . $id,
+            'plate_number' => 'sometimes|unique:vehicles,plate_number,' . $vehicle->id,
             'gas_type' => 'sometimes|string',
             'machine_capacity' => 'sometimes|string',
             'photo' => 'sometimes|image|mimes:jpg,png,jpeg,webp|max:2048',
@@ -239,7 +248,7 @@ class VehicleController extends Controller
             $user->id,
             $vehicle->id,
             'Berhasil memperbarui kendaraan!',
-            "Kendaraan {$vehicle->name} dengan plat nomor {$vehicle->plate_number} telah berhasil diperbarui.",
+            "Kendaraan $vehicle->name dengan plat nomor $vehicle->plate_number telah berhasil diperbarui.",
             'system'
         );
 
@@ -252,50 +261,50 @@ class VehicleController extends Controller
      * VEHICLE STATUS (DASHBOARD + IOT READY)
      */
     public function vehicleStatus()
-{
-    $user = Auth::user();
-    $vehicle = Vehicle::where('user_id', $user->id)
-        ->with(['telemetry', 'location', 'security'])
-        ->first();
+    {
+        $user = Auth::user();
+        $vehicle = Vehicle::where('user_id', $user->id)
+            ->with(['telemetry', 'location', 'security'])
+            ->first();
 
-    if (!$vehicle) {
+        if (!$vehicle) {
+            return response()->json([
+                'message' => 'Kendaraan belum tersedia'
+            ], 404);
+        }
+
+        $deviceConnected = DevicePairingLog::where('vehicle_id', $vehicle->id)
+            ->where('action', 'paired')
+            ->exists();
+
+        if (!$deviceConnected) {
+            return response()->json([
+                'message' => 'Device belum terhubung'
+            ], 409);
+        }
+
         return response()->json([
-            'message' => 'Kendaraan belum tersedia'
-        ], 404);
-    }
-
-    $deviceConnected = DevicePairingLog::where('vehicle_id', $vehicle->id)
-        ->where('action', 'paired')
-        ->exists();
-
-    if (!$deviceConnected) {
-        return response()->json([
-            'message' => 'Device belum terhubung'
-        ], 409);
-    }
-
-    return response()->json([
-        'message' => 'Berhasil mendapatkan status kendaraan',
-        'data' => [
-            'vehicle' => [
-                'name' => "{$vehicle->brand} {$vehicle->name}",
-                'latitude' => $vehicle->location->latitude,
-                'longitude' => $vehicle->location->longitude,
-            ],
-            'telemetry' => [
-                'odometer' => $vehicle->telemetry->odometer,
-                'rpm' => rand(800, 3000), // simulasi
-                'battery' => $vehicle->telemetry->accumulator,
-                'fuel' => $vehicle->telemetry->gas_level,
-            ],
-            'security' => [
-                'alarm_enabled' => (bool) $vehicle->security->alarm_enabled,
-                'remote_engine_cut' => (bool) $vehicle->security->remote_engine_cut,
-                'anti_theft_enabled' => (bool) $vehicle->security->anti_theft_enabled,
+            'message' => 'Berhasil mendapatkan status kendaraan',
+            'data' => [
+                'vehicle' => [
+                    'name' => "{$vehicle->brand} {$vehicle->name}",
+                    'latitude' => $vehicle->location->latitude,
+                    'longitude' => $vehicle->location->longitude,
+                ],
+                'telemetry' => [
+                    'odometer' => $vehicle->telemetry->odometer,
+                    'rpm' => rand(800, 3000), // simulasi
+                    'battery' => $vehicle->telemetry->accumulator,
+                    'fuel' => $vehicle->telemetry->gas_level,
+                ],
+                'security' => [
+                    'alarm_enabled' => (bool) $vehicle->security->alarm_enabled,
+                    'remote_engine_cut' => (bool) $vehicle->security->remote_engine_cut,
+                    'anti_theft_enabled' => (bool) $vehicle->security->anti_theft_enabled,
+                ]
             ]
-        ]
-    ]);
-}
+        ]);
+    }
 
     /**
      * VEHICLE DETAIL (PROFILE + DEVICE)
@@ -319,7 +328,8 @@ class VehicleController extends Controller
         return response()->json([
             'message' => 'Berhasil mendapatkan detail kendaraan',
             'data' => [
-                'name' => "{$vehicle->brand} {$vehicle->name}",
+                'name' => "$vehicle->name",
+                'brand' => "$vehicle->brand",
                 'plate_number' => $vehicle->plate_number,
                 'year' => $vehicle->year,
                 'odometer' => $telemetry->odometer,
@@ -363,5 +373,61 @@ class VehicleController extends Controller
         return response()->json([
             'message' => 'Device berhasil terhubung'
         ]);
+    }
+    
+    public function updateOdometer(Request $request, $id)
+    {
+        $user = $request->user();
+        $vehicle = Vehicle::firstWhere('user_id', $user->id);
+
+        if (!$vehicle) {
+            return response()->json([
+                'message' => 'Kendaraan tidak ditemukan!'
+            ], 404);
+        }
+
+        if($vehicle->user_id !== $user->id) {
+            return response()->json([
+                'message' => 'Bukan kendaraan anda!'
+            ], 403);
+        }
+
+        // Validasi
+        $validator = Validator::make($request->all(), [
+            'odometer' => 'required|numeric',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Invalid field',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        $telemetry = VehicleTelemetry::firstWhere('vehicle_id', $id);
+
+        $telemetry->update($data);
+
+        if($vehicle->last_notified_service +200 >= $data['odometer']) {
+            ServiceType::where('category', 'required')->get()->map(function($service) use($vehicle, $user) {
+                createNotification(
+                    $user->id,
+                    $vehicle->id,
+                    'Pengigat service!',
+                    "Jangan lupa untuk servis $service->name, $service->km_target km lagi!",
+                    'service'
+                );
+            });
+
+            $vehicle->update([
+                'last_notified_service' => $data['odometer']
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Berhasil update odometer!'
+        ], 200);
     }
 }

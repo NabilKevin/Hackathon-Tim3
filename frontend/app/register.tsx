@@ -1,8 +1,10 @@
+import { api } from "@/services/api";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +16,63 @@ import {
 export default function Register() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
+
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!username || !email || !password || !passwordConfirmation) {
+      Alert.alert("Error", "Semua field wajib diisi");
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      Alert.alert("Error", "Konfirmasi password tidak sama");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await api.post("/register", {
+        username,
+        email,
+        password,
+        password_confirmation: passwordConfirmation,
+      });
+
+      Alert.alert(
+        "Berhasil",
+        "Registrasi berhasil, silakan login",
+        [
+          {
+            text: "OK",
+            onPress: () => router.replace("/login"),
+          },
+        ]
+      );
+    } catch (error: any) {
+      if (error.response?.status === 422) {
+        const errors = error.response.data.errors;
+
+        const messages = Object.values(errors)
+          .flat()
+          .join("\n");
+
+        Alert.alert("Validasi Gagal", messages);
+      } else {
+        Alert.alert(
+          "Gagal",
+          error.response?.data?.message || "Terjadi kesalahan server"
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View
@@ -48,10 +107,7 @@ export default function Register() {
           ]}
           placeholder="Masukkan Username"
           placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-          value={formdata.username}
-          onChangeText={handleChange('username')}
         />
-        {error.username ? <Text style={styles.errorText}>{error.username}</Text> : null}
       </View>
 ``
       <View style={styles.inputGroup}>
@@ -73,10 +129,7 @@ export default function Register() {
           ]}
           placeholder="contoh@sinyalroda.id"
           placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-          value={formdata.email}
-          onChangeText={handleChange('email')}
         />
-        {error.email ? <Text style={styles.errorText}>{error.email}</Text> : null}
       </View>
 
       <View style={styles.inputGroup}>
@@ -97,10 +150,7 @@ export default function Register() {
           ]}
           placeholder="Kata Sandi"
           placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-          value={formdata.password}
-          onChangeText={handleChange('password')}
         />
-        {error.password ? <Text style={styles.errorText}>{error.password}</Text> : null}
       </View>
 
       <View style={styles.inputGroup}>
@@ -121,10 +171,7 @@ export default function Register() {
           ]}
           placeholder="Konfirmasi Kata Sandi"
           placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-          value={formdata.password_confirmation}
-          onChangeText={handleChange('password_confirmation')}
         />
-        {error.password_confirmation ? <Text style={styles.errorText}>{error.password_confirmation}</Text> : null}
       </View>
 
       <TouchableOpacity style={styles.primaryBtn}>

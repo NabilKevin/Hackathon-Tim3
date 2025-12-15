@@ -1,7 +1,11 @@
+import { getToken } from "@/services/auth";
+import { getServiceTypes } from "@/services/service";
+import { addService, getVehicleDetail } from "@/services/vehicle";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -11,24 +15,75 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const SERVICE_TYPES = [
-  "Servis Rutin",
-  "Ganti Oli Mesin",
-  "Ganti Oli Gear",
-  "Servis Lainnya",
-];
-
 export default function AddServiceScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  const [serviceType, setServiceType] = useState<string | null>(null);
+  const [serviceTypes, setServiceTypes] = useState([]);
+  const [serviceType, setServiceType] = useState({
+    id: "",
+    name: "",
+  });
   const [showDropdown, setShowDropdown] = useState(false);
-  const [date, setDate] = useState("");
-  const [km, setKm] = useState("45,230 km");
+  const [date, setDate] = useState(new Date().toLocaleDateString());
+  const [km, setKm] = useState("0 km");
   const [note, setNote] = useState("");
   const [price, setPrice] = useState("");
+
+  const getServiceType = async () => {
+    const token = await getToken();
+    if (!token) return null;
+    try {
+      const data = await getServiceTypes(token);
+      setServiceTypes(data);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  const getVehicle = async () => {
+    const token = await getToken();
+    if (!token) return null;
+    try {
+      const data = await getVehicleDetail(token);
+      
+      setKm(data.odometer.toString());
+    } catch (error: any) {
+      console.log(error.response.data);
+    }
+  }
+
+  const handleSubmit = async () => {
+    const token = await getToken();
+    if (!token) return Alert.alert("Error", "Token tidak ditemukan");
+    if (!serviceType || !date || !km || !price || !note) return Alert.alert("Error", "Semua field wajib diisi");
+    console.log({
+        service_type_id: serviceType?.id,
+        date,
+        km,
+        description: note,
+        total: price,
+      });
+    
+    try {
+      await addService(token, {
+        service_type_id: serviceType?.id,
+        date,
+        km,
+        description: note,
+        total: price,
+      })
+      router.back();
+    } catch (error:any) {
+      console.log(error.response.data);
+    }
+  }
+
+  useEffect(() => {
+    getVehicle();
+    getServiceType();
+  }, []);
 
   return (
     <View
@@ -76,7 +131,7 @@ export default function AddServiceScreen() {
                 : "#94A3B8",
             }}
           >
-            {serviceType ?? "Pilih Jenis Service"}
+            {serviceType?.name ?? "Pilih Jenis Service"}
           </Text>
           <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
         </TouchableOpacity>
@@ -88,7 +143,7 @@ export default function AddServiceScreen() {
               { backgroundColor: isDark ? "#1E293B" : "#FFFFFF" },
             ]}
           >
-            {SERVICE_TYPES.map((item) => (
+            {serviceTypes.map((item: any) => (
               <TouchableOpacity
                 key={item}
                 style={styles.dropdownItem}
@@ -98,7 +153,7 @@ export default function AddServiceScreen() {
                 }}
               >
                 <Text style={{ color: isDark ? "#E5E7EB" : "#0F172A" }}>
-                  {item}
+                  {item?.name}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -122,7 +177,7 @@ export default function AddServiceScreen() {
         {/* KM */}
         <Text style={styles.label}>Kilometer saat ini</Text>
         <TextInput
-          value={km}
+          value={`${km} km`}
           editable={true}
           style={[
             styles.input,
@@ -162,7 +217,7 @@ export default function AddServiceScreen() {
       </View>
 
       {/* BUTTON */}
-      <TouchableOpacity style={styles.saveButton}>
+      <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
         <Text style={styles.saveText}>Simpan</Text>
       </TouchableOpacity>
     </View>

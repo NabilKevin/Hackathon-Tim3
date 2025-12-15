@@ -1,8 +1,11 @@
+import { getToken } from "@/services/auth";
+import { getVehicleDetail, updateVehicle } from "@/services/vehicle";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Alert,
     Image,
     ScrollView,
     StyleSheet,
@@ -36,27 +39,64 @@ export default function AddVehicleScreen() {
     }
   };
 
-  const handleSave = () => {
-    if (!vehicleName || !brand || !year || !plate) {
+  const handleSave = async () => {
+    const token = await getToken();
+    if (!token) return Alert.alert("Error", "Token tidak ditemukan");
+    if (!vehicleName || !brand || !year || !plate || !fuel || !transmission || !engine ) {
       alert("Mohon lengkapi semua data wajib!");
       return;
     }
+    
+    const data = new FormData();
+    data.append("name", vehicleName);
+    data.append("brand", brand);
+    data.append("transmission", transmission);
+    data.append("year", year);
+    data.append("plate_number", plate);
+    data.append("gas_type", fuel);
+    data.append("machine_capacity", engine);
+    console.log(data);
+    
+    try {
+      await updateVehicle(token, data);
+      alert("Kendaraan berhasil disimpan!");
+      router.push("/(tabs)/accounts");
+    } catch (error: any) {
+      if (error.response) {
+        console.log('Server error:', error.response.data);
+      } else if (error.request) {
+        console.log('No response from server');
+      } else {
+        console.log('Error:', error.message);
+      }
 
-    const payload = {
-      vehicleName,
-      brand,
-      transmission,
-      year,
-      plate,
-      fuel,
-      engine,
-      image,
-    };
+      alert("Terjadi kesalahan saat menyimpan kendaraan.");
+    }
 
-    console.log("KIRIM DATA:", payload);
-    alert("Kendaraan berhasil disimpan!");
-    router.push("/(tabs)/accounts");
   };
+
+  const fetchData = async () => {
+    const token = await getToken();
+    if (!token) return Alert.alert("Error", "Token tidak ditemukan");
+    try {
+      const response = await getVehicleDetail(token);
+      console.log(response);
+      
+      setBrand(response.brand);
+      setVehicleName(response.name);
+      setYear(response.year.toString());
+      setFuel(response.gas_type);
+      setTransmission(response.transmission);
+      setEngine(response.machine_capacity);
+      setPlate(response.plate_number);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  useEffect(() => {
+    fetchData();  
+  }, []);
 
   return (
     <ScrollView

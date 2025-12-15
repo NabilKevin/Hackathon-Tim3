@@ -5,10 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
+    private function uploadFile($file, $userId)
+    {
+        $timestamp = now()->format('YmdHis');
+        $extension = $file->getClientOriginalExtension();
+        $fileName = "users_{$userId}_{$timestamp}.{$extension}";
+        return $file->storeAs('users', $fileName, 'public');
+    }
     /**
      * Login pengguna dan dapatkan token akses.
      *
@@ -187,21 +195,40 @@ class AuthController extends Controller
         $rule = [
             'username' => 'sometimes|min:4|unique:users,username,' . $user->id ,
             'email' => 'sometimes|email:dns|unique:users,email,' . $user->id ,
-            'password' => 'sometimes|min:8|confirmed'
+            'password' => 'sometimes|string|min:8|confirmed',
+            'current_password' => 'sometimes|string|required_with:password',
+            'image' => 'sometimes|image|mimes:jpg,png,jpeg,webp|max:2048',
         ];
         $validator = Validator::make($request->all(), $rule);
 
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Kolom tidak valid',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
+                'data' => $request->all(),
+                's' => $request->file('image')
             ], 422);
         }
 
         $data = $validator->validated();
+        $user = $request->user();
         
         if (isset($data['password'])) {
+
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json([
+                    'message' => 'Kolom tidak valid',
+                    'errors' => [
+                        'current_password' => ['Password lama tidak sesuai.']
+                    ]
+                ], 422);
+            }
             $data['password'] = bcrypt($data['password']);
+        }
+
+        if(isset($data['image'])) {
+            $filePath = $this->uploadFile($data['image'], $user->id);
+            $data['image'] = $filePath;
         }
 
         $user->update($data);

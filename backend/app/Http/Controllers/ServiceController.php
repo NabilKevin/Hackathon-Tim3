@@ -64,10 +64,14 @@ class ServiceController extends Controller
             'message' => 'Berhasil mendapatkan riwayat servis!',
             'data' => $services->map(function($service) {
                 return [
-                    'name' => $service->serviceType->name,
-                    'km' => $service->km,
-                    'total' => $service->total,
-                    'date' => $service->date,
+                    "id" => $service->id,
+                    "title" => $service->serviceType->name,
+                    "price" => $service->total,
+                    "km" => $service->km,
+                    "date" => $service->date,
+                    "icon" => "tools",
+                    "category" => $service->serviceType->name,
+                    "note" => $service->description,
                 ];
             })
         ], 200);
@@ -174,14 +178,16 @@ class ServiceController extends Controller
         }
 
         $telemetry = VehicleTelemetry::firstWhere('vehicle_id', $vehicle->id);
-        $services = Service::where('vehicle_id', $vehicle->id)->get();
-        $serviceSchedule = $query->latest()->get()->map(function($schedule) use($services, $telemetry) {
-            $schedule['km_target'] -= $telemetry->odometer;
+        // $services = Service::where('vehicle_id', $vehicle->id)->get();
+        $serviceSchedule = $query->latest()->get()->map(function($schedule) use($telemetry) {
+            $kmRemaining = $schedule->km_target - $telemetry->odometer;
             return [
-                'name' => $schedule->serviceType->name,
-                'km_target' => $schedule->km_target,
-                'date_target' => $schedule->date_target,
-                'created_at' => $schedule->created_at,
+                "id" => $schedule->id,
+                "title" => $schedule->serviceType->name,
+                "km" => $kmRemaining > 0 ? $kmRemaining : 0,
+                "date" => $schedule->date_target,
+                "icon" => "tools",
+                "category" => $schedule->serviceType->name,
             ];
         });
 
@@ -262,7 +268,7 @@ class ServiceController extends Controller
             $estimatedDate = Carbon::now()->addDays($serviceType->interval_km/50)->toDateString();
             $serviceSchedule->update([
                 'status' => 'pending',
-                'km_target' => $serviceType->interval_km,
+                'km_target' => $serviceType->interval_km + $odometer,
                 'date_target' => $estimatedDate
             ]);
             $estimatedDate = formatIndonesianDate($estimatedDate);
@@ -285,6 +291,14 @@ class ServiceController extends Controller
         return response()->json([
             'message' => 'Berhasil menambah servis!',
             'data' => $service
+        ], 200);
+    }
+
+    public function serviceTypes()
+    {
+        return response()->json([
+            'message' => 'Berhasil mendapatkan tipe servis!',
+            'data' => ServiceType::all()
         ], 200);
     }
 }

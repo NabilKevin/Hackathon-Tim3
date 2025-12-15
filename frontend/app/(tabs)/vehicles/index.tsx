@@ -1,6 +1,9 @@
+import { getToken } from "@/services/auth";
+import { getVehicleDetail } from "@/services/vehicle";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import {
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -12,7 +15,34 @@ import {
 
 export default function Vehicles() {
   const isDark = useColorScheme() === "dark";
+  const [data, setData] = React.useState({
+    name: "",
+    brand: "",
+    year: "",
+    plate_number: "",
+    odometer: 0,
+    transmission: "",
+    gas_type: "",
+    machine_capacity: "",
+  });
 
+  const fetchData = async () => {
+    const token = await getToken();
+    if (token) {
+      try {
+        const response = await getVehicleDetail(token);
+        setData(response);
+      } catch (error: any) {
+        console.log(error.response.data);
+      }
+    } else {
+      Alert.alert("Error", "Token tidak ditemukan");
+    }
+  };
+
+  useEffect (() => {
+    fetchData();
+  }, []);
   return (
     <ScrollView
       style={[
@@ -38,10 +68,10 @@ export default function Vehicles() {
 
         <View style={styles.headerInfo}>
           <Text style={[styles.motorTitle, { color: "#fff" }]}>
-            Honda Vario 150
+            {data.brand} {data.name}
           </Text>
           <Text style={[styles.motorSub, { color: "#E0E0E0" }]}>
-            B 1234 SJA • 2023
+            {data.plate_number} • {data.year}
           </Text>
         </View>
       </View>
@@ -95,7 +125,7 @@ export default function Vehicles() {
             { color: isDark ? "#fff" : "#000" }
           ]}
         >
-          45,230 km
+          {data.odometer} km
         </Text>
 
         <TouchableOpacity 
@@ -137,7 +167,7 @@ export default function Vehicles() {
             Transmisi
           </Text>
           <Text style={[styles.detailValue, { color: isDark ? "#fff" : "#000" }]}>
-            CVT Automatic
+            {data.transmission.toUpperCase()}
           </Text>
         </View>
 
@@ -146,7 +176,7 @@ export default function Vehicles() {
             Bahan Bakar
           </Text>
           <Text style={[styles.detailValue, { color: isDark ? "#fff" : "#000" }]}>
-            Pertamax Turbo
+            {data.gas_type.split(' ').map((word) => `${word[0].toUpperCase()}${word.slice(1).toLowerCase()}`).join(' ')}
           </Text>
         </View>
 
@@ -155,7 +185,7 @@ export default function Vehicles() {
             Kapasitas Mesin
           </Text>
           <Text style={[styles.detailValue, { color: isDark ? "#fff" : "#000" }]}>
-            1000cc Turbo
+            {data.machine_capacity} cc
           </Text>
         </View>
       </View>

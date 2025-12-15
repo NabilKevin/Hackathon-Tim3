@@ -1,6 +1,9 @@
+import { getToken } from "@/services/auth";
+import { getNotification } from "@/services/notification";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
+  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -11,77 +14,36 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const FILTERS = ["Semua", "Keamanan", "Servis Rutin", "Oli Mesin","Oli Gear","Servis Lainnya"] as const;
-
-interface NotificationItem {
-  id: string;
-  title: string;
-  message: string;
-  time: string;
-  category: string;
-  icon: React.ReactNode;
-}
-
-const DATA: NotificationItem[] = [
-  {
-    id: "1",
-    title: "Servis Rutin",
-    message: "Jangan lupa servis motor mu ya untuk menjaga kesehatan motor mu",
-    time: "3 min ago",
-    category: "Servis Rutin",
-    icon: <Ionicons name="construct-outline" size={22} color="#3B82F6" />,
-  },
-  {
-    id: "2",
-    title: "Getaran Terdeteksi",
-    message: "Parkiran Mall Grand Indo",
-    time: "2 min ago",
-    category: "Keamanan",
-    icon: <Ionicons name="alert-circle" size={22} color="#EF4444" />,
-  },
-  {
-    id: "3",
-    title: "Ganti Oli Gear",
-    message: "Jadwal Ganti Oli Gear sudah dekat jangan lupa untuk segera mengganti dalam 2 hari kedepan ya",
-    time: "3 min ago",
-    category: "Oli Gear",
-    icon: <Ionicons name="cog-outline" size={22} color="#F59E0B" />,
-  },
-  {
-    id: "4",
-    title: "Ganti Oli Mesin",
-    message: "Estimasi 3 Hari Ke Depan",
-    time: "3 min ago",
-    category: "Oli Mesin",
-    icon: <MaterialCommunityIcons name="oil" size={22} color="#0EA5E9" />,
-  },
-  {
-    id: "5",
-    title: "Ganti Oli Mesin",
-    message: "Jadwal Ganti Oli Mesin sudah terlewat",
-    time: "3 min ago",
-    category: "Oli Mesin",
-    icon: <MaterialCommunityIcons name="oil" size={22} color="#EF4444" />,
-  },
-  {
-    id: "6",
-    title: "Mesin Menyala",
-    message: "Pastikan yang menyalakan mesin itu anda ya",
-    time: "2 min ago",
-    category: "Keamanan",
-    icon: <Ionicons name="warning-outline" size={22} color="#EF4444" />,
-  },
-];
+const FILTERS = ["All", "Security", "Service", "System", "Warning"] as const;
 
 export default function NotificationScreen() {
   const insets = useSafeAreaInsets();
   const isDark = useColorScheme() === "dark";
-  const [activeFilter, setActiveFilter] = useState("Semua");
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [data, setData] = useState([])
 
-  const filteredData =
-    activeFilter === "Semua"
-      ? DATA
-      : DATA.filter((item) => item.category === activeFilter);
+  const fetchData = async () => {
+    const token = await getToken();
+    if (token) {
+      try {
+        const response = await getNotification(token, activeFilter.toLowerCase());
+        console.log(response);
+        
+        const d = activeFilter === "All"
+          ? response
+          : response.filter((item: any) => item.type === activeFilter.toLowerCase())
+        setData(d);
+      } catch (error: any) {
+        console.log(error.response.data);
+      }
+    } else {
+      Alert.alert("Error", "Token tidak ditemukan");
+    }
+  };
+
+  React.useEffect(() => {
+    fetchData();
+  }, [activeFilter]);
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? "#0F172A" : "#F8FAFC" }}>
@@ -129,8 +91,8 @@ export default function NotificationScreen() {
 
       {/* LIST */}
       <FlatList
-        data={filteredData}
-        keyExtractor={(item) => item.id}
+        data={data}
+        keyExtractor={(item: any) => item.id}
         contentContainerStyle={{ padding: 16 }}
         renderItem={({ item }) => (
           <View
@@ -140,13 +102,13 @@ export default function NotificationScreen() {
             ]}
           >
             <View style={styles.cardRow}>
-              <View style={styles.iconWrapper}>{item.icon}</View>
+              <View style={styles.iconWrapper}><Ionicons name="construct-outline" size={22} color="#3B82F6" /> </View>
 
               <View style={{ flex: 1 }}>
                 <Text style={[styles.title, { color: isDark ? "#E5E7EB" : "#0F172A" }]}>
                   {item.title}
                 </Text>
-                <Text style={styles.message}>{item.message}</Text>
+                <Text style={styles.message}>{item.excerpt}</Text>
               </View>
 
               <Text style={styles.time}>{item.time}</Text>

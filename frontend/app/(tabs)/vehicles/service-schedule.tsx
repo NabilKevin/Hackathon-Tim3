@@ -1,6 +1,8 @@
+import { getToken } from "@/services/auth";
+import { getServiceSchedule } from "@/services/vehicle";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -23,11 +25,9 @@ interface BaseItem {
 
 interface NormalService extends BaseItem {
   type?: "service";
-  price: string;
   km: string;
   date: string;
   category: string;
-  note: string;
 }
 
 interface BatteryService extends BaseItem {
@@ -38,50 +38,6 @@ interface BatteryService extends BaseItem {
 
 type ServiceItem = NormalService | BatteryService;
 
-/* ==========================
-   DATA
-========================== */
-
-const DATA: ServiceItem[] = [
-  {
-    id: "1",
-    title: "Servis Rutin",
-    price: "Rp. 120.000",
-    km: "45,000 km",
-    date: "12 Okt",
-    icon: "tools",
-    category: "Servis Rutin",
-    note: "Ganti oli mesin, cek rem, dan tune-up lengkap.",
-  },
-  {
-    id: "2",
-    title: "Oli Mesin",
-    price: "Rp. 120.000",
-    km: "44,950 km",
-    date: "12 Okt",
-    icon: "oil",
-    category: "Oli Mesin",
-    note: "Penggantian oli mesin sintetis.",
-  },
-  {
-    id: "3",
-    title: "Oli Gear",
-    price: "Rp. 120.000",
-    km: "40,000 km",
-    date: "20 Aug",
-    icon: "cog",
-    category: "Oli Gear",
-    note: "Penggantian oli gear transmisi.",
-  },
-  {
-    id: "4",
-    title: "Status Aki",
-    icon: "car-battery",
-    type: "battery",
-    batteryVoltage: "12.4 V",
-    batteryStatus: "Good",
-  },
-];
 
 /* ==========================
    SCREEN
@@ -91,6 +47,21 @@ export default function ServiceScheduleScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const [data, setData] = useState([]);
+  
+  const fetchData = async () => {
+    const token = await getToken();
+    if (token) {
+      const schedule = await getServiceSchedule(token);
+      setData(schedule);
+      console.log(schedule);
+      
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [])
 
   const renderItem = ({ item }: { item: ServiceItem }) => {
     // ===== STATUS AKI =====
@@ -173,7 +144,7 @@ export default function ServiceScheduleScreen() {
           </View>
 
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={styles.kmText}>in {item.km}</Text>
+            <Text style={styles.kmText}>in {item.km} km</Text>
             <Text style={styles.dateText}>{item.date}</Text>
           </View>
         </View>
@@ -217,7 +188,7 @@ export default function ServiceScheduleScreen() {
 
       {/* LIST */}
       <FlatList
-        data={DATA}
+        data={data}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={{ padding: 16 }}

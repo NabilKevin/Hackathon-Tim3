@@ -1,5 +1,7 @@
+import { getToken } from "@/services/auth";
+import { getServiceHistories } from "@/services/vehicle";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   FlatList,
@@ -16,58 +18,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const FILTERS = ["Semua", "Oli Mesin", "Servis Rutin", "Oli Gear", "Servis Lainnya"] as const;
 
 interface ServiceItem {
-  id: string;
-  title: string;
-  price: string;
-  km: string;
-  date: string;
-  icon: string;
-  category: string;
-  note: string;
+  id: string,
+  title: string,
+  price: number,
+  km: number,
+  date: string,
+  icon: string,
+  category: string,
+  note: string,
 }
-
-const DATA: ServiceItem[] = [
-  {
-    id: "1",
-    title: "Servis Rutin",
-    price: "Rp. 120.000",
-    km: "45,000 km",
-    date: "12 Okt",
-    icon: "tools",
-    category: "Servis Rutin",
-    note: "Ganti oli mesin, cek rem, dan tune-up lengkap.",
-  },
-  {
-    id: "2",
-    title: "Oli Mesin",
-    price: "Rp. 120.000",
-    km: "44,950 km",
-    date: "12 Okt",
-    icon: "oil",
-    category: "Oli Mesin",
-    note: "Penggantian oli mesin sintetis berkualitas tinggi.",
-  },
-  {
-    id: "3",
-    title: "Oli Gear",
-    price: "Rp. 120.000",
-    km: "40,000 km",
-    date: "20 Aug",
-    icon: "cog",
-    category: "Oli Gear",
-    note: "Penggantian oli gear untuk transmisi manual.",
-  },
-  {
-    id: "4",
-    title: "Servis Lainnya",
-    price: "Rp. 120.000",
-    km: "50,000 km",
-    date: "15 Sep",
-    icon: "tools",
-    category: "Servis Lainnya",
-    note: "Inspeksi sistem pendingin dan filter udara.",
-  },
-];
 
 export default function ServiceHistory() {
   const insets = useSafeAreaInsets();
@@ -77,11 +36,20 @@ export default function ServiceHistory() {
   const [activeFilter, setActiveFilter] = useState("Semua");
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-
-  const filteredData =
-    activeFilter === "Semua"
-      ? DATA
-      : DATA.filter((item) => item.category === activeFilter);
+  const [data, setData] = useState([]);
+  
+  const fetchData = async () => {
+    const token = await getToken();
+    if (token) {
+      const histories = await getServiceHistories(token);
+      const d = activeFilter === "Semua"
+      ? histories
+      : histories?.filter((item: ServiceItem) => item.category === activeFilter)
+      setData(d);
+      console.log(d);
+      
+    }
+  };
 
   const openDetail = (item: ServiceItem) => {
     setSelectedService(item);
@@ -92,6 +60,10 @@ export default function ServiceHistory() {
     setModalVisible(false);
     setSelectedService(null);
   };
+  
+  useEffect(() => {
+    fetchData();
+  }, [activeFilter])
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? "#0F172A" : "#F1F5F9" }}>
@@ -167,7 +139,7 @@ export default function ServiceHistory() {
       </View>
 
       {/* LIST */}
-      {filteredData.length === 0 ? (
+      {data.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: isDark ? "#94A3B8" : "#64748B" }]}>
             Data tidak ditemukan
@@ -175,9 +147,9 @@ export default function ServiceHistory() {
         </View>
       ) : (
         <FlatList
-          data={filteredData}
+          data={data}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12 }}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item: ServiceItem) => item.id}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => openDetail(item)}>
               <View
