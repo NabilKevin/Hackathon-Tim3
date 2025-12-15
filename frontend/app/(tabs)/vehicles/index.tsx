@@ -14,7 +14,7 @@ import {
   useColorScheme,
 } from "react-native";
 
-export default function Vehicles() {
+export default function Index() {
   const isDark = useColorScheme() === "dark";
 
   const [data, setData] = useState({
