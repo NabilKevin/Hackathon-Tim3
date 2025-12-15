@@ -28,7 +28,6 @@
     },
     "plugins": [
       "expo-router",
-      
       [
         "expo-splash-screen",
         {
@@ -46,6 +45,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "48ccc35e-87c0-40c3-93a6-db71d96018f6"
+      }
     }
   }
 }
