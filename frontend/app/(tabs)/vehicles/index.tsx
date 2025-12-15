@@ -167,7 +167,7 @@ export default function Vehicles() {
             Transmisi
           </Text>
           <Text style={[styles.detailValue, { color: isDark ? "#fff" : "#000" }]}>
-            {data.transmission.toUpperCase()}
+            {data.transmission?.toUpperCase()}
           </Text>
         </View>
 
@@ -176,7 +176,7 @@ export default function Vehicles() {
             Bahan Bakar
           </Text>
           <Text style={[styles.detailValue, { color: isDark ? "#fff" : "#000" }]}>
-            {data.gas_type.split(' ').map((word) => `${word[0].toUpperCase()}${word.slice(1).toLowerCase()}`).join(' ')}
+            {data.gas_type?.split(' ').map((word) => `${word[0]?.toUpperCase()}${word.slice(1)?.toLowerCase()}`).join(' ')}
           </Text>
         </View>
 

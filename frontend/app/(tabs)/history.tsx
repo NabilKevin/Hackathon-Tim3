@@ -28,6 +28,25 @@ interface ServiceItem {
   note: string,
 }
 
+function formatRupiah(angka: number, withSymbol = true) {
+  console.log(angka);
+  
+  // Pastikan input adalah angka
+  if (typeof angka !== 'number') {
+    angka = parseFloat(angka);
+    if (isNaN(angka)) return withSymbol ? 'Rp0' : '0';
+  }
+
+  // Format angka dengan pemisah ribuan
+  const formatted = angka.toLocaleString('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  });
+
+  // Tambahkan simbol "Rp" jika diminta
+  return withSymbol ? `Rp${formatted}` : formatted;
+}
+
 export default function ServiceHistory() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -46,7 +65,6 @@ export default function ServiceHistory() {
       ? histories
       : histories?.filter((item: ServiceItem) => item.category === activeFilter)
       setData(d);
-      console.log(d);
       
     }
   };
@@ -324,7 +342,7 @@ export default function ServiceHistory() {
                     Total Biaya Servis
                   </Text>
                   <Text style={[styles.value, { color: isDark ? "#FFFFFF" : "#000000" }]}>
-                    {selectedService.price}
+                    {formatRupiah(selectedService.price)}
                   </Text>
                 </View>
               </>
