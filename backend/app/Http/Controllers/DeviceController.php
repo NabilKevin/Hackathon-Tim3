@@ -7,7 +7,7 @@ use App\Models\Vehicle;
 use App\Models\DevicePairingLog;
 use App\Models\Device;
 use App\Models\VehicleTelemetry;
-
+use Illuminate\Support\Facades\DB;
 class DeviceController extends Controller
 {
     public function ping(Request $request)
@@ -32,48 +32,83 @@ class DeviceController extends Controller
         ], 409);
     }
 
-    $device = Device::where('device_serial_number', $request->device_serial_number)->first();
+    DB::beginTransaction();
 
-    // Device sudah dipakai user lain?
-    if ($device && $device->paired) {
-        return response()->json([
-            'message' => 'Device already paired'
-        ], 409);
-    }
+    try {
+        $device = Device::where('device_serial_number', $request->device_serial_number)->first();
 
-    // Create jika belum ada
-    if (!$device) {
-        $device = Device::create([
-            'device_serial_number' => $request->device_serial_number,
-            'device_name' => 'IoT Tracker',
-            'device_model' => 'Unknown',
-            'device_type' => 'GPS',
-            'connection_type' => 'WiFi',
-            'paired' => false,
+        // Device sudah dipakai user lain?
+        if ($device && $device->paired) {
+            return response()->json([
+                'message' => 'Device already paired'
+            ], 409);
+        }
+
+        // Create device jika belum ada
+        if (!$device) {
+            $device = Device::create([
+                'device_serial_number' => $request->device_serial_number,
+                'device_name' => 'IoT Tracker',
+                'device_model' => 'Unknown',
+                'device_type' => 'GPS',
+                'connection_type' => 'WiFi',
+                'paired' => false,
+            ]);
+        }
+
+        // Pairing
+        $device->update([
+            'paired' => true,
+            'paired_at' => now(),
         ]);
+
+        $vehicle->update([
+            'device_id' => $device->id
+        ]);
+
+        DevicePairingLog::create([
+            'device_id' => $device->id,
+            'vehicle_id' => $vehicle->id,
+            'user_id' => $user->id,
+            'action' => 'paired'
+        ]);
+
+        DB::commit();
+
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'Failed to pair device',
+            'error' => $e->getMessage()
+        ], 500);
     }
 
-    // Pairing
-    $device->update([
-        'paired' => true,
-        'paired_at' => now(),
-    ]);
+    /**
+     * ======================
+     * NOTIFICATION TEST
+     * ======================
+     */
 
-    $vehicle->update([
-        'device_id' => $device->id
-    ]);
+    // createNotification(
+    //     $user->id,
+    //     $vehicle->id,
+    //     'Perangkat berhasil terhubung',
+    //     'Perangkat IoT berhasil dipasangkan ke kendaraan Anda.',
+    //     'device'
+    // );
 
-    DevicePairingLog::create([
-        'device_id' => $device->id,
-        'vehicle_id' => $vehicle->id,
-        'user_id' => $user->id,
-        'action' => 'paired'
-    ]);
-
-    VehicleTelemetry::create([
-        'vehicle_id' => $vehicle->id,
-        'odometer' => rand(10000, 30000)
-    ]);
+    // if (!empty($user->expo_push_token)) {
+    //     sendExpoPush(
+    //         $user->expo_push_token,
+    //         'Perangkat berhasil terhubung',
+    //         'Perangkat IoT berhasil dipasangkan ke kendaraan Anda.',
+    //         [
+    //             'type' => 'device',
+    //             'vehicle_id' => $vehicle->id,
+    //             'device_id' => $device->id
+    //         ]
+    //     );
+    // }
 
     return response()->json([
         'message' => 'Device paired successfully',

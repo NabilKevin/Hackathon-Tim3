@@ -23,6 +23,19 @@ export default function HomeScreen() {
   const [telemetry, setTelemetry] = useState<any>(null);
   const [security, setSecurity] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [latestNotification, setLatestNotification] = useState<any>(null);
+  const fetchLatestNotification = async () => {
+    try {
+      const res = await api.get("/notifications?type=all");
+
+      if (res.data?.data?.length > 0) {
+        setLatestNotification(res.data.data[0]); // ambil paling baru
+      }
+    } catch (error) {
+      console.log("FETCH LATEST NOTIFICATION ERROR:", error);
+    }
+  };
+
   const fetchVehicleStatus = async () => {
     try {
       const res = await api.get("/vehicles/status");
@@ -49,6 +62,11 @@ export default function HomeScreen() {
       setLoading(false);
     }
   };
+  // const notificationLatest = async () => {
+  //   try {
+  //     const
+  //   } catch 
+  // }
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -58,6 +76,7 @@ export default function HomeScreen() {
       }
 
       await fetchVehicleStatus();
+      await fetchLatestNotification();
     })();
   }, []);
   async function goToMyLocation() {
@@ -77,11 +96,33 @@ export default function HomeScreen() {
       alert("Tidak dapat mengambil lokasi");
     }
   }
-useEffect(() => {
-  const interval = setInterval(fetchVehicleStatus, 10000);
-  return () => clearInterval(interval);
-}, []);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchVehicleStatus();
+      fetchLatestNotification();
+    }, 10000);
 
+    return () => clearInterval(interval);
+  }, []);
+const handleAlarm = async () => {
+  try {
+    await api.post("/vehicles/alarm/on");
+    alert("Alarm berhasil diaktifkan");
+  } catch (error) {
+    alert("Gagal mengaktifkan alarm");
+    console.log(error);
+  }
+};
+
+const handleEngineOff = async () => {
+  try {
+    await api.post("/vehicles/engine/off");
+    alert("Mesin berhasil dimatikan");
+  } catch (error) {
+    alert("Gagal mematikan mesin");
+    console.log(error);
+  }
+};
   return (
     <ScrollView
       style={[
@@ -194,17 +235,24 @@ useEffect(() => {
 
       {/* ACTIONS */}
       <View style={styles.actions}>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#FF4D4F" }]}>
-          <Ionicons name="alert-circle-outline" size={25} color="#fff" />
-          <Text style={styles.actionText}>Alarm</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: isDark ? "#353535ff" : "#1F2937" }]}
-        >
-          <Ionicons name="power-outline" size={25} color="#fff" />
-          <Text style={styles.actionText}>Matikan Mesin</Text>
-        </TouchableOpacity>
+  style={[styles.actionBtn, { backgroundColor: "#FF4D4F" }]}
+  onPress={handleAlarm}
+>
+  <Ionicons name="alert-circle-outline" size={25} color="#fff" />
+  <Text style={styles.actionText}>Alarm</Text>
+</TouchableOpacity>
+
+       <TouchableOpacity
+  style={[
+    styles.actionBtn,
+    { backgroundColor: isDark ? "#353535ff" : "#1F2937" },
+  ]}
+  onPress={handleEngineOff}
+>
+  <Ionicons name="power-outline" size={25} color="#fff" />
+  <Text style={styles.actionText}>Matikan Mesin</Text>
+</TouchableOpacity>
       </View>
 
       {/* STATUS */}
@@ -313,7 +361,13 @@ useEffect(() => {
           { backgroundColor: isDark ? "#1f1f1f" : "#fff" },
         ]}
       >
-        <View style={styles.recentIndicator} />
+        <View
+          style={[
+            styles.recentIndicator,
+            { backgroundColor: latestNotification?.is_read ? "#9CA3AF" : "#EF4444" },
+          ]}
+        />
+
         <View>
           <Text
             style={[
@@ -321,18 +375,20 @@ useEffect(() => {
               { color: isDark ? "#fff" : "#111827" },
             ]}
           >
-            Getaran Terdeteksi
+            {latestNotification?.title || "-"}
           </Text>
+
           <Text
             style={[
               styles.recentSubtitle,
               { color: isDark ? "#9ca3af" : "#6B7280" },
             ]}
           >
-            Parkiran Mall Grand Indo · 2 min ago
+            {latestNotification?.excerpt || "Tidak ada notifikasi terbaru"}
           </Text>
         </View>
       </View>
+
 
       <View style={{ height: 30 }} />
     </ScrollView>
