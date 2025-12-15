@@ -176,14 +176,7 @@ class ServiceController extends Controller
         $telemetry = VehicleTelemetry::firstWhere('vehicle_id', $vehicle->id);
         $services = Service::where('vehicle_id', $vehicle->id)->get();
         $serviceSchedule = $query->latest()->get()->map(function($schedule) use($services, $telemetry) {
-            if(count($services) > 0) {
-                $service = $services->firstWhere('service_type_id', $schedule->service_type_id);
-                if($service) {
-                    $schedule['km_target'] = ($service->km + $schedule['km_target']) - $telemetry->odometer;
-                }
-            } else {
-                $schedule['km_target'] -= $telemetry->odometer;
-            }
+            $schedule['km_target'] -= $telemetry->odometer;
             return [
                 'name' => $schedule->serviceType->name,
                 'km_target' => $schedule->km_target,

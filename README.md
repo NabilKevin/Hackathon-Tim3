@@ -1,4 +1,3 @@
-@@ -1,24 +1,26 @@
 # SinyalRoda 🚀
 *Solusi all-in-one untuk keamanan, tracking, monitoring, dan perawatan kendaraan bermotor – khususnya motor listrik di Indonesia.*
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -24,7 +23,7 @@ Selain itu, **Sinyal Roda** juga menyediakan fitur pencatatan sederhana terkait 
 
 Indonesia memiliki lebih dari **125 juta sepeda motor** (data Korlantas Polri) – terbesar di Asia Tenggara. Sayangnya, sistem keamanan dan monitoring masih sangat terbatas:
 
-@@ -33,11 +35,11 @@ Indonesia memiliki lebih dari **125 juta sepeda motor** (data Korlantas Polri) 
+Indonesia memiliki lebih dari **125 juta sepeda motor** (data Korlantas Polri) 
 
 **SinyalRoda hadir sebagai solusi satu atap (all-in-one).**
 

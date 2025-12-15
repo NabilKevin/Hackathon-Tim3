@@ -32,12 +32,12 @@ class DatabaseSeeder extends Seeder
             'interval_km' => 4500
         ]);
         ServiceType::create([
-            'name' => 'Servis Rutin',
+            'name' => 'Rutin',
             'interval_km' => 40000
         ]);
         ServiceType::create([
-            'name' => 'Servis Lainnya',
+            'name' => 'Lainnya',
             'category' => 'optional'
         ]);
     }
-}
+}   

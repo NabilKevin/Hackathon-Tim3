@@ -35,12 +35,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(hasNoVehicle::class)->group(function () {
         Route::post('vehicles', [VehicleController::class, 'store']);
     });
-
-    Route::middleware(hasVehicle::class)->group(function () {
-
-        Route::prefix('vehicles')->group(function () {
-
-            // Vehicle core
+    
+    Route::middleware(hasVehicle::class)->group(function() {
+        Route::prefix('vehicles')->group(function() {
             Route::put('/', [VehicleController::class, 'update']);
             Route::get('status', [VehicleController::class, 'vehicleStatus']);
             Route::get('detail', [VehicleController::class, 'vehicleDetail']);

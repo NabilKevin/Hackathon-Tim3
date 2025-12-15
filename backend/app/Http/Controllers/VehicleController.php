@@ -13,7 +13,7 @@ use App\Models\VehicleTelemetry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class VehicleController extends Controller
@@ -104,14 +104,144 @@ class VehicleController extends Controller
                 ]);
             });
 
-            createNotification(
-                $user->id,
-                $vehicle->id,
-                'Kendaraan berhasil ditambahkan',
-                'Silakan hubungkan perangkat untuk mengaktifkan fitur keamanan.',
-                'system'
+        VehicleLocation::create([
+            'vehicle_id' => $vehicle->id,
+            'longitude' => $data['longitude'],
+            'latitude' => $data['latitude']
+        ]);
+
+        createNotification($user->id, $vehicle->id, 'Berhasil membuat kendaraan!', "Kendaraan $vehicle->name dengan plat nomor $vehicle->plate_number telah berhasil dibuat! Silakan pasangkan perangkat pelacak untuk memulai pemantauan.", 'system');
+        
+        return response()->json([
+            'message' => 'Berhasil membuat kendaraan!'
+        ], 200);
+    }
+
+    /**
+     * Memperbarui data kendaraan yang sudah ada.
+     *
+     * Hanya field yang dikirim yang akan diupdate. Foto bersifat opsional.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required ID kendaraan. Example: 1
+     *
+     * @bodyParam name string optional Nama kendaraan. Example: Jazz
+     * @bodyParam brand string optional Merek kendaraan. Example: Honda
+     * @bodyParam transmission string optional Jenis transmisi. Example: Automatic
+     * @bodyParam year integer optional Tahun produksi. Example: 2020
+     * @bodyParam plate_number string optional Nomor plat (harus unik). Example: B1234ABC
+     * @bodyParam gas_type string optional Jenis bahan bakar. Example: Pertamax
+     * @bodyParam machine_capacity string optional Kapasitas mesin/muatan. Example: 1500 cc
+     * @bodyParam photo file optional Foto kendaraan (jpg, png, jpeg, webp, max 2MB).
+     * @bodyParam latitude number optional Koordinat lintang. Example: -6.2741
+     * @bodyParam longitude number optional Koordinat bujur. Example: 106.8500
+     *
+     * @response 200 scenario="Berhasil" {
+     *   "message": "Berhasil update kendaraan!",
+     *   "vehicle": {
+     *     "id": 1,
+     *     "user_id": 1,
+     *     "name": "Jazz",
+     *     "brand": "Honda",
+     *     "year": 2020,
+     *     "plate_number": "B1234ABC",
+     *     "photo_path": "vehicles/vehicle_1_20251206100000.jpg",
+     *     "created_at": "2025-12-06T10:00:00.000000Z",
+     *     "updated_at": "2025-12-06T10:05:00.000000Z"
+     *   }
+     * }
+     *
+     * @response 404 scenario="Kendaraan tidak ditemukan" {
+     *   "message": "Kendaraan tidak ditemukan!"
+     * }
+     *
+     * @response 422 scenario="Validasi gagal" {
+     *   "message": "Invalid field",
+     *   "errors": {
+     *     "plate_number": ["The plate number has already been taken."]
+     *   }
+     * }
+     */
+    public function update(Request $request, $id)
+    {
+        $vehicle = Vehicle::find($id);
+
+        if (!$vehicle) {
+            return response()->json([
+                'message' => 'Kendaraan tidak ditemukan!'
+            ], 404);
+        }
+
+        // Validasi
+        $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|string',
+            'brand' => 'sometimes|string',
+            'transmission' => 'sometimes|string',
+            'year' => 'sometimes|integer|min:1900|max:' . now()->year,
+            'plate_number' => 'sometimes|unique:vehicles,plate_number,' . $id,
+            'gas_type' => 'sometimes|string',
+            'machine_capacity' => 'sometimes|string',
+            'photo' => 'sometimes|image|mimes:jpg,png,jpeg,webp|max:2048',
+            'longitude' => 'sometimes|numeric|min:-180|max:180',
+            'latitude' => 'sometimes|numeric|min:-90|max:90',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Invalid field',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $user = $request->user();
+
+        // Handle upload foto
+        $path = $vehicle->photo_path; // pertahankan foto lama jika tidak diupload
+        if ($request->hasFile('photo')) {
+            $path = $this->uploadFile($request->file('photo'), $user->id);
+        }
+
+        // Update kendaraan
+        $vehicle->update([
+            // 'user_id' => $user->id, // ⚠️ HAPUS jika tidak boleh ubah kepemilikan
+            'name' => $data['name'] ?? $vehicle->name,
+            'brand' => $data['brand'] ?? $vehicle->brand,
+            'year' => $data['year'] ?? $vehicle->year,
+            'plate_number' => $data['plate_number'] ?? $vehicle->plate_number,
+            'photo_path' => $path,
+        ]);
+
+        // Update atau buat telemetri
+        $telemetry = VehicleTelemetry::firstWhere(['vehicle_id' => $vehicle->id]);
+
+        $telemetry->update(
+            [
+                'transmission' => $data['transmission'] ?? $telemetry->transmission,
+                'gas_type' => $data['gas_type'] ?? $telemetry->gas_type,
+                'machine_capacity' => $data['machine_capacity'] ?? $telemetry->machine_capacity
+            ]
+        );
+
+        // Update atau buat lokasi
+        if (isset($data['longitude']) && isset($data['latitude'])) {
+            VehicleLocation::firstWhere(['vehicle_id' => $vehicle->id])->update(
+                [
+                    'longitude' => $data['longitude'],
+                    'latitude' => $data['latitude']
+                ]
             );
-        });
+        }
+
+        // Buat notifikasi
+        createNotification(
+            $user->id,
+            $vehicle->id,
+            'Berhasil memperbarui kendaraan!',
+            "Kendaraan {$vehicle->name} dengan plat nomor {$vehicle->plate_number} telah berhasil diperbarui.",
+            'system'
+        );
 
         return response()->json([
             'message' => 'Berhasil membuat kendaraan'
@@ -234,5 +364,4 @@ class VehicleController extends Controller
             'message' => 'Device berhasil terhubung'
         ]);
     }
-    
 }
