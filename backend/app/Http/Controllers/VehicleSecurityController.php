@@ -180,4 +180,32 @@ class VehicleSecurityController extends Controller
     ]);
 }
 
+public function alarmOn()
+    {
+        // 🔌 Kirim command ke device / IoT / MQTT / HTTP
+        // contoh: DeviceService::alarmOn();
+
+        return response()->json([
+            'message' => 'Alarm berhasil diaktifkan'
+        ]);
+    }
+
+    public function alarmOff()
+    {
+        // DeviceService::alarmOff();
+
+        return response()->json([
+            'message' => 'Alarm berhasil dimatikan'
+        ]);
+    }
+
+    public function engineOff()
+    {
+        // DeviceService::engineOff();
+
+        return response()->json([
+            'message' => 'Mesin berhasil dimatikan'
+        ]);
+    }
+
 }
