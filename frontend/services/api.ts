@@ -3,7 +3,7 @@ import axios from "axios";
 
 export const api = axios.create({
   // Ganti baseURL sesuai IP backend yang aktif di jaringan lokal
-  baseURL: "http://192.168.3.7:8000/api",
+  baseURL: "http://10.249.18.179:8000/api",
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",

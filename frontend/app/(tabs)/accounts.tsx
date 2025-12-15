@@ -1,17 +1,17 @@
-import { getUser } from "@/services/auth";
+import { getUser, logout } from "@/services/auth";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router } from "expo-router";
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Image,
+  Alert, Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   useColorScheme,
-  View,
+  View
 } from "react-native";
 
 export default function Account() {
@@ -108,24 +108,31 @@ export default function Account() {
 
       {/* LOGOUT BUTTON */}
       <TouchableOpacity
-        style={[
-          styles.logoutButton,
-          {
-            backgroundColor: isDark ? "#4C1D1D" : "#FFE5E5",
-            shadowColor: isDark ? "#000" : "#FF6B6B",
-          },
-        ]}
-        onPress={() => router.push("../login") }
-      >
-        <Text
-          style={[
-            styles.logoutText,
-            { color: isDark ? "#FFB4B4" : "#E53935" },
-          ]}
-        >
-          Keluar / Logout
-        </Text>
-      </TouchableOpacity>
+  style={[
+    styles.logoutButton,
+    {
+      backgroundColor: isDark ? "#4C1D1D" : "#FFE5E5",
+      shadowColor: isDark ? "#000" : "#FF6B6B",
+    },
+  ]}
+  onPress={async () => {
+    const result = await logout();
+    if (result) {
+      router.replace("../login"); // pakai replace agar tidak bisa back
+    } else {
+      Alert.alert("Error", "Gagal logout, coba lagi");
+    }
+  }}
+>
+  <Text
+    style={[
+      styles.logoutText,
+      { color: isDark ? "#FFB4B4" : "#E53935" },
+    ]}
+  >
+    Keluar / Logout
+  </Text>
+</TouchableOpacity>
 
       {/* VERSION */}
       <Text
