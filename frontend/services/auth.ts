@@ -14,7 +14,15 @@ export const getToken = async () => {
 };
 
 export const logout = async () => {
-  await AsyncStorage.removeItem("token");
+  try {
+    await AsyncStorage.removeItem("token"); // hapus token
+    // hapus data user jika ada
+    await AsyncStorage.removeItem("user");
+    return true;
+  } catch (err) {
+    console.log("Logout error:", err);
+    return false;
+  }
 };
 
 export const getUser = async () => {

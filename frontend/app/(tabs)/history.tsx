@@ -198,7 +198,7 @@ export default function ServiceHistory() {
                     >
                       {item.title}
                     </Text>
-                    <Text style={styles.price}>{item.price}</Text>
+                    <Text style={styles.price}>Rp.{item.price}</Text>
                   </View>
 
                   {/* KM + DATE */}
@@ -209,7 +209,7 @@ export default function ServiceHistory() {
                         { color: isDark ? "#E2E8F0" : "#0F172A" },
                       ]}
                     >
-                      {item.km}
+                      {item.km} KM
                     </Text>
                     <Text style={styles.date}>{item.date}</Text>
                   </View>
@@ -299,7 +299,7 @@ export default function ServiceHistory() {
                     Kilometer saat Service
                   </Text>
                   <Text style={[styles.value, { color: isDark ? "#FFFFFF" : "#000000" }]}>
-                    {selectedService.km}
+                    {selectedService.km} Km
                   </Text>
                 </View>
 

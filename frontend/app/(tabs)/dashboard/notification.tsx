@@ -6,20 +6,18 @@ import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
-  FlatList,
-  ScrollView,
-  StyleSheet,
+  FlatList, Modal, StyleSheet,
   Text,
   TouchableOpacity,
   useColorScheme,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /* ================= FILTER CONFIG ================= */
 const FILTERS = [
-  { label: "Semua", type: "all", icon: <Ionicons name="alert-circle" size={18} color="#EF4444" /> },
-  { label: "Keamanan", type: "security", icon: <Ionicons name="alert-circle" size={18} color="#EF4444" /> },
+  { label: "Semua", type: "all", icon: <Ionicons name="notifications-outline" size={18} color="#6B7280" /> },
+  { label: "Keamanan", type: "security", icon: <Ionicons name="shield-checkmark-outline" size={18} color="#EF4444" /> },
   { label: "Servis", type: "service", icon: <Ionicons name="construct-outline" size={18} color="#3B82F6" /> },
   { label: "Sistem", type: "system", icon: <Ionicons name="settings-outline" size={18} color="#0EA5E9" /> },
   { label: "Peringatan", type: "warning", icon: <Ionicons name="warning-outline" size={18} color="#F59E0B" /> },
@@ -44,6 +42,19 @@ export default function NotificationScreen() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [data, setData] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [selectedItem, setSelectedItem] = useState<NotificationItem | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const openModal = (item: NotificationItem) => {
+    setSelectedItem(item);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setSelectedItem(null);
+    setModalVisible(false);
+  };
 
   /* ---------- Fetch Notifications ---------- */
   const fetchNotifications = async (type: string) => {
@@ -83,77 +94,76 @@ export default function NotificationScreen() {
     }, [])
   );
 
-  return (
+  /* ---------- ICON PER TYPE ---------- */
+  const renderIcon = (type: string) => {
+    switch (type) {
+      case "security":
+        return <Ionicons name="shield-checkmark-outline" size={24} color="#EF4444" />;
+      case "service":
+        return <Ionicons name="construct-outline" size={24} color="#3B82F6" />;
+      case "system":
+        return <Ionicons name="settings-outline" size={24} color="#0EA5E9" />;
+      case "warning":
+        return <Ionicons name="warning-outline" size={24} color="#F59E0B" />;
+      default:
+        return <Ionicons name="notifications-outline" size={24} color="#6B7280" />;
+    }
+  };
+
+ return (
     <View style={{ flex: 1, backgroundColor: isDark ? "#0F172A" : "#F8FAFC" }}>
-      {/* HEADER */}
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: insets.top + 12,
-            backgroundColor: isDark ? "#0F172A" : "#FFFFFF",
-          },
-        ]}
-      >
-        <Text style={[styles.headerTitle, { color: isDark ? "#F8FAFC" : "#0F172A" }]}>
-          Notifikasi
-        </Text>
-
-        {/* FILTER */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {FILTERS.map((filter) => (
-            <TouchableOpacity
-              key={filter.type}
-              style={[
-                styles.filterButton,
-                {
-                  backgroundColor:
-                    activeFilter === filter.type ? "#3B82F6" : isDark ? "#1E293B" : "#FFFFFF",
-                },
-              ]}
-              onPress={() => setActiveFilter(filter.type)}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                {filter.icon}
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: activeFilter === filter.type ? "#FFFFFF" : "#64748B",
-                  }}
-                >
-                  {filter.label}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* LIST */}
       <FlatList
         data={data}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: 16 }}
         renderItem={({ item }) => (
-          <View style={[styles.card, { backgroundColor: isDark ? "#1E293B" : "#FFFFFF" }]}>
-            <View style={styles.cardRow}>
-              <View style={styles.iconWrapper}>
-                <Ionicons name="construct-outline" size={22} color="#3B82F6" />
-              </View>
+          <TouchableOpacity onPress={() => openModal(item)}>
+            <View style={[styles.card, { backgroundColor: isDark ? "#1E293B" : "#FFFFFF" }]}>
+              <View style={styles.cardRow}>
+                <View style={styles.iconWrapper}>{renderIcon(item.type)}</View>
 
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.title, { color: isDark ? "#E5E7EB" : "#0F172A" }]}>
-                  {item.title}
-                </Text>
-                <Text style={styles.message}>{item.excerpt ?? item.message}</Text>
-              </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[styles.title, { color: isDark ? "#E5E7EB" : "#0F172A" }]}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.message}>{item.excerpt ?? item.message}</Text>
+                </View>
 
-              <Text style={styles.time}>{item.time ?? item.created_at}</Text>
+                <Text style={styles.time}>{item.time ?? item.created_at}</Text>
+              </View>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
+
+      {/* MODAL DETAIL */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { backgroundColor: isDark ? "#1E293B" : "#FFFFFF" }]}>
+            <Text style={[styles.modalTitle, { color: isDark ? "#E5E7EB" : "#0F172A" }]}>
+              {selectedItem?.title}
+            </Text>
+            <Text style={[styles.modalType, { color: isDark ? "#94A3B8" : "#64748B" }]}>
+              Type: {selectedItem?.type}
+            </Text>
+            <Text style={[styles.modalMessage, { color: isDark ? "#E5E7EB" : "#0F172A" }]}>
+              {selectedItem?.excerpt}
+            </Text>
+            <Text style={[styles.modalTime, { color: isDark ? "#94A3B8" : "#64748B" }]}>
+              {selectedItem?.time}
+            </Text>
+
+            <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+              <Text style={{ color: "#fff", fontWeight: "700" }}>Tutup</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -179,6 +189,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  filterContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  filterText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
   card: {
     borderRadius: 14,
     padding: 14,
@@ -193,9 +212,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
@@ -203,7 +222,7 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: "600",
     fontSize: 15,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   message: {
     fontSize: 13,
@@ -213,5 +232,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#94A3B8",
     marginLeft: 6,
+    alignSelf: "flex-start",
   },
+
+   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  modalContainer: { width: "85%", borderRadius: 14, padding: 20 },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  modalType: { fontSize: 13, marginBottom: 10 },
+  modalMessage: { fontSize: 15, marginBottom: 12 },
+  modalTime: { fontSize: 12, textAlign: "right", marginBottom: 20 },
+  closeButton: { backgroundColor: "#3B82F6", paddingVertical: 10, borderRadius: 10, alignItems: "center" },
 });
