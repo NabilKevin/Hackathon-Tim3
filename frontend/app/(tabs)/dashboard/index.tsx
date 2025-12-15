@@ -1,8 +1,8 @@
 import { api } from "@/services/api";
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import Svg, { Path } from "react-native-svg";
@@ -24,22 +24,38 @@ export default function HomeScreen() {
   const [security, setSecurity] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [latestNotification, setLatestNotification] = useState<any>(null);
+  const [alarmActive, setAlarmActive] = useState(false);
+  const [engineOn, setEngineOn] = useState(true);
+  const [hasUnread, setHasUnread] = useState(false);
+
+  // ----------------- API FETCH -----------------
   const fetchLatestNotification = async () => {
     try {
-      const res = await api.get("/notifications?type=all");
-
+      const res = await api.get("/notifications/latest?type=all&limit=1");
       if (res.data?.data?.length > 0) {
-        setLatestNotification(res.data.data[0]); // ambil paling baru
+        const notif = res.data.data[0];
+        setLatestNotification(notif);
+        setHasUnread(notif.is_read === 0);
+      } else {
+        setHasUnread(false);
       }
     } catch (error) {
       console.log("FETCH LATEST NOTIFICATION ERROR:", error);
     }
   };
 
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await api.get("/notifications/unread-count");
+      setHasUnread(res.data.count > 0);
+    } catch (err) {
+      console.log("UNREAD COUNT ERROR:", err);
+    }
+  };
+
   const fetchVehicleStatus = async () => {
     try {
       const res = await api.get("/vehicles/status");
-
       const data = res.data.data;
 
       setVehicleName(data.vehicle.name);
@@ -56,29 +72,16 @@ export default function HomeScreen() {
 
       setTelemetry(data.telemetry);
       setSecurity(data.security);
+      setAlarmActive(data.telemetry?.alarm_status ?? false);
+      setEngineOn(data.telemetry?.engine_status ?? true);
     } catch (error) {
       console.log("FETCH VEHICLE STATUS ERROR:", error);
     } finally {
       setLoading(false);
     }
   };
-  // const notificationLatest = async () => {
-  //   try {
-  //     const
-  //   } catch 
-  // }
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        alert("Izin lokasi ditolak");
-        return;
-      }
 
-      await fetchVehicleStatus();
-      await fetchLatestNotification();
-    })();
-  }, []);
+  // ----------------- LOCATION -----------------
   async function goToMyLocation() {
     try {
       const loc = await Location.getCurrentPositionAsync({});
@@ -90,39 +93,85 @@ export default function HomeScreen() {
       };
 
       setRegion(newRegion);
-
       mapRef.current?.animateToRegion(newRegion, 700);
     } catch (err) {
       alert("Tidak dapat mengambil lokasi");
     }
   }
+
+  // ----------------- INITIAL FETCH -----------------
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        alert("Izin lokasi ditolak");
+        return;
+      }
+
+      // Fetch semua data awal
+      await Promise.all([fetchVehicleStatus(), fetchLatestNotification(), fetchUnreadCount()]);
+    })();
+  }, []);
+
+  // ----------------- INTERVAL UPDATE -----------------
   useEffect(() => {
     const interval = setInterval(() => {
       fetchVehicleStatus();
       fetchLatestNotification();
-    }, 10000);
+    }, 10000); // setiap 10 detik
 
     return () => clearInterval(interval);
   }, []);
-const handleAlarm = async () => {
-  try {
-    await api.post("/vehicles/alarm/on");
-    alert("Alarm berhasil diaktifkan");
-  } catch (error) {
-    alert("Gagal mengaktifkan alarm");
-    console.log(error);
-  }
-};
 
-const handleEngineOff = async () => {
-  try {
-    await api.post("/vehicles/engine/off");
-    alert("Mesin berhasil dimatikan");
-  } catch (error) {
-    alert("Gagal mematikan mesin");
-    console.log(error);
-  }
-};
+  // ----------------- REFRESH ON FOCUS -----------------
+  useFocusEffect(
+    useCallback(() => {
+      fetchVehicleStatus();
+      fetchLatestNotification();
+    }, [])
+  );
+
+  // ----------------- ALARM & ENGINE -----------------
+  const handleAlarmToggle = async () => {
+    try {
+      if (alarmActive) {
+        await api.post("/vehicles/alarm/off");
+        setAlarmActive(false);
+        alert("Alarm dimatikan");
+      } else {
+        await api.post("/vehicles/alarm/on");
+        setAlarmActive(true);
+        alert("Alarm diaktifkan");
+      }
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        alert("Aktifkan Anti-Theft Mode terlebih dahulu");
+      } else {
+        alert("Gagal mengubah status alarm");
+      }
+    }
+  };
+
+  const handleEngineToggle = async () => {
+    try {
+      if (engineOn) {
+        await api.post("/vehicles/engine/off");
+        setEngineOn(false);
+        alert("Mesin dimatikan");
+      } else {
+        await api.post("/vehicles/engine/on");
+        setEngineOn(true);
+        alert("Mesin dinyalakan");
+      }
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        alert("Aktifkan Anti-Theft Mode terlebih dahulu");
+      } else {
+        alert("Gagal mengubah status mesin");
+      }
+    }
+  };
+
   return (
     <ScrollView
       style={[
@@ -169,13 +218,15 @@ const handleEngineOff = async () => {
             styles.headerIcon,
             { backgroundColor: isDark ? "#374151" : "#E5E7EB" },
           ]}
-          onPress={() => { router.push("/(tabs)/dashboard/notification") }}
+          onPress={() => router.push("/(tabs)/dashboard/notification")}
         >
           <Ionicons
             name="notifications-outline"
             size={22}
             color={isDark ? "#fff" : "#1F2937"}
           />
+
+          {hasUnread && <View style={styles.unreadDot} />}
         </TouchableOpacity>
       </View>
 
@@ -236,23 +287,42 @@ const handleEngineOff = async () => {
       {/* ACTIONS */}
       <View style={styles.actions}>
         <TouchableOpacity
-  style={[styles.actionBtn, { backgroundColor: "#FF4D4F" }]}
-  onPress={handleAlarm}
->
-  <Ionicons name="alert-circle-outline" size={25} color="#fff" />
-  <Text style={styles.actionText}>Alarm</Text>
-</TouchableOpacity>
+          style={[
+            styles.actionBtn,
+            {
+              backgroundColor: alarmActive ? "#22C55E" : "#FF4D4F",
+            },
+          ]}
+          onPress={handleAlarmToggle}
+        >
+          <Ionicons
+            name={alarmActive ? "notifications" : "notifications-off-outline"}
+            size={25}
+            color="#fff"
+          />
+          <Text style={styles.actionText}>
+            {alarmActive ? "Matikan Alarm" : "Aktifkan Alarm"}
+          </Text>
+        </TouchableOpacity>
 
-       <TouchableOpacity
-  style={[
-    styles.actionBtn,
-    { backgroundColor: isDark ? "#353535ff" : "#1F2937" },
-  ]}
-  onPress={handleEngineOff}
->
-  <Ionicons name="power-outline" size={25} color="#fff" />
-  <Text style={styles.actionText}>Matikan Mesin</Text>
-</TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.actionBtn,
+            {
+              backgroundColor: engineOn ? "#1F2937" : "#F97316",
+            },
+          ]}
+          onPress={handleEngineToggle}
+        >
+          <Ionicons
+            name={engineOn ? "power-outline" : "flash-outline"}
+            size={25}
+            color="#fff"
+          />
+          <Text style={styles.actionText}>
+            {engineOn ? "Matikan Mesin" : "Nyalakan Mesin"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* STATUS */}
@@ -384,7 +454,7 @@ const handleEngineOff = async () => {
               { color: isDark ? "#9ca3af" : "#6B7280" },
             ]}
           >
-            {latestNotification?.excerpt || "Tidak ada notifikasi terbaru"}
+            {latestNotification?.message || "Tidak ada notifikasi terbaru"}
           </Text>
         </View>
       </View>
@@ -564,6 +634,16 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginTop: 3,
   },
+  unreadDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EF4444", // merah
+  },
+
 
   fuelCard: {
     flexDirection: "row",

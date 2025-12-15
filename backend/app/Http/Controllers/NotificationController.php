@@ -115,42 +115,72 @@ class NotificationController extends Controller
         ], 200);
     }
 
-    public function latest(Request $request)
+   public function latest(Request $request)
 {
     $type  = $request->query('type', 'all');
-    $limit = $request->query('limit'); // 🔥 tambahan
-
-    $validTypes = ['security', 'service', 'system', 'warning'];
+    $limit = $request->query('limit', 1);
+    
+    $validTypes = ['security', 'service', 'system', 'warning', 'device'];
     if ($type !== 'all' && !in_array($type, $validTypes)) {
         return response()->json([
             'message' => 'Tipe notifikasi tidak valid.'
         ], 422);
     }
 
-    $query = \App\Models\Notification::orderBy('created_at', 'desc');
+    $query = Notification::where('user_id', Auth::id())
+        ->orderBy('created_at', 'desc');
 
-    // 🔎 filter type
     if ($type !== 'all') {
         $query->where('type', $type);
     }
 
-    // 🔥 LIMIT (untuk notifikasi terkini)
-    if ($limit && is_numeric($limit)) {
-        $query->limit((int) $limit);
+    $notifications = $query
+        ->limit((int) $limit)
+        ->get();
+
+    return response()->json([
+        'message' => 'Berhasil mendapatkan notifikasi terkini!',
+        'data' => NotificationResource::collection($notifications)
+    ]);
+}
+public function markAsRead($id)
+{
+    $notification = Notification::where('id', $id)
+        ->where('user_id', Auth::id())
+        ->first();
+
+    if (!$notification) {
+        return response()->json([
+            'message' => 'Notifikasi tidak ditemukan!'
+        ], 404);
     }
 
-    $notifications = $query->get([
-        'id',
-        'title',
-        'excerpt',
-        'is_read',
-        'type',
-        'created_at'
+    $notification->update([
+        'is_read' => true
     ]);
 
     return response()->json([
-        'message' => 'Berhasil mendapatkan notifikasi!',
-        'data' => $notifications
+        'message' => 'Notifikasi berhasil ditandai sebagai dibaca.'
+    ]);
+}
+ public function unreadCount(Request $request)
+    {
+        $count = Notification::where('user_id', $request->user()->id)
+            ->where('is_read', 0)
+            ->count();
+
+        return response()->json([
+            'count' => $count
+        ]);
+    }
+public function markAllAsRead()
+{
+    Notification::where('user_id', Auth::id())
+        ->where('is_read', false)
+        ->update(['is_read' => true]);
+
+    return response()->json([
+        'message' => 'Semua notifikasi ditandai sebagai dibaca.'
     ]);
 }
 

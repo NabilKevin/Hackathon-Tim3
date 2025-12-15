@@ -40,7 +40,7 @@ class VehicleSecurityService
 
     /* ===================== EVENT HANDLERS ===================== */
 
-    private static function engineOn($vehicle, $telemetry, $triggers)
+    public static function engineOn($vehicle, $telemetry, $triggers)
     {
         if (!$triggers->engine_on) return;
 
@@ -93,7 +93,7 @@ class VehicleSecurityService
 
     /* ===================== ACTIONS ===================== */
 
-    private static function engineOff(Vehicle $vehicle, VehicleTelemetry $telemetry)
+   public static function engineOff(Vehicle $vehicle, VehicleTelemetry $telemetry)
     {
         if ($telemetry->engine_status === false) return;
 

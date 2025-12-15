@@ -89,13 +89,13 @@ class DeviceController extends Controller
      * ======================
      */
 
-    // createNotification(
-    //     $user->id,
-    //     $vehicle->id,
-    //     'Perangkat berhasil terhubung',
-    //     'Perangkat IoT berhasil dipasangkan ke kendaraan Anda.',
-    //     'device'
-    // );
+    createNotification(
+        $user->id,
+        $vehicle->id,
+        'Perangkat berhasil terhubung',
+        'Perangkat IoT berhasil dipasangkan ke kendaraan Anda.',
+        'system'
+    );
 
     // if (!empty($user->expo_push_token)) {
     //     sendExpoPush(

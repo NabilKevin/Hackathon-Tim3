@@ -28,10 +28,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::put('update-profile', [AuthController::class, 'update']);
 
-    Route::prefix('notifications')->group(function () {
+    Route::prefix('notifications')->middleware('auth:sanctum')->group(function () {
+
+        Route::get('/latest', [NotificationController::class, 'latest']);
+         Route::get('unread-count', [NotificationController::class, 'unreadCount']);
+
         Route::get('/', [NotificationController::class, 'index']);
         Route::get('{id}', [NotificationController::class, 'show']);
-        Route::get('/latest', [NotificationController::class, 'latest']);
+
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
+       
     });
 
 
@@ -62,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('alarm/on', [VehicleSecurityController::class, 'alarmOn']);
             Route::post('alarm/off', [VehicleSecurityController::class, 'alarmOff']);
             Route::post('engine/off', [VehicleSecurityController::class, 'engineOff']);
+            Route::post('engine/on', [VehicleSecurityController::class, 'engineOn']);
             // IoT Event Simulation
             Route::post('simulate-event', [VehicleSecurityController::class, 'simulateEvent']);
         });

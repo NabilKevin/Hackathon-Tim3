@@ -133,17 +133,7 @@ class VehicleController extends Controller
             'system'
         );
 
-        if (!empty($user->expo_push_token)) {
-            sendExpoPush(
-                $user->expo_push_token,
-                'Kendaraan berhasil ditambahkan',
-                'Silakan hubungkan perangkat untuk mengaktifkan fitur keamanan.',
-                [
-                    'type' => 'system',
-                    'vehicle_id' => $vehicle->id
-                ]
-            );
-        }
+        
 
         return response()->json([
             'message' => 'Berhasil membuat kendaraan',
@@ -191,6 +181,9 @@ class VehicleController extends Controller
                     'rpm' => rand(800, 3000), // simulasi
                     'battery' => $vehicle->telemetry->accumulator,
                     'fuel' => $vehicle->telemetry->gas_level,
+                    'engine_status' => $vehicle->telemetry->engine_status,
+                    'alarm_status' => $vehicle->telemetry->alarm_status,
+
                 ],
                 'security' => [
                     'alarm_enabled' => (bool) $vehicle->security->alarm_enabled,

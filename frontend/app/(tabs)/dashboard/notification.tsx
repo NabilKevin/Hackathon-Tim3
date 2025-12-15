@@ -1,6 +1,7 @@
 import { api } from "@/services/api";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   FlatList,
   ScrollView,
@@ -20,6 +21,7 @@ const FILTERS = [
   { label: "Servis", type: "service" },
   { label: "Sistem", type: "system" },
   { label: "Peringatan", type: "warning" },
+  
 ] as const;
 
 /* ================= TYPE MAP ================= */
@@ -74,6 +76,22 @@ export default function NotificationScreen() {
   useEffect(() => {
     fetchNotifications("all");
   }, []);
+
+ 
+
+const markAllAsRead = async () => {
+  try {
+    await api.post("/notifications/read-all");
+  } catch (err) {
+    console.log("MARK READ ERROR:", err);
+  }
+};
+
+ useFocusEffect(
+  useCallback(() => {
+    markAllAsRead();
+  }, [])
+);
 
   const fetchNotifications = async (type: string) => {
     try {
