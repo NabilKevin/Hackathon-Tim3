@@ -4,7 +4,6 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   StyleSheet,
   Text,
@@ -75,7 +74,6 @@ export default function Register() {
     }
   };
 
-
   return (
     <View
       style={[
@@ -111,7 +109,7 @@ export default function Register() {
           placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
         />
       </View>
-
+``
       <View style={styles.inputGroup}>
         <Text style={[styles.label, { color: isDark ? "#CBD5E1" : "#374151" }]}>
           Email
@@ -176,16 +174,8 @@ export default function Register() {
         />
       </View>
 
-      <TouchableOpacity
-        style={styles.primaryBtn}
-        onPress={handleRegister}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.primaryBtnText}>Daftar</Text>
-        )}
+      <TouchableOpacity style={styles.primaryBtn}>
+        <Text style={styles.primaryBtnText}>Daftar</Text>
       </TouchableOpacity>
 
       <Text
@@ -310,5 +300,9 @@ const styles = StyleSheet.create({
   },
   link: {
     fontWeight: "600",
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
   },
 });

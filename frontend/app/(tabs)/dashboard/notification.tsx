@@ -1,8 +1,11 @@
 import { api } from "@/services/api";
+import { getToken } from "@/services/auth";
+import { getNotification } from "@/services/notification";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -14,46 +17,15 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /* ================= FILTER CONFIG ================= */
-
 const FILTERS = [
-  { label: "Semua", type: "all" },
-  { label: "Keamanan", type: "security" },
-  { label: "Servis", type: "service" },
-  { label: "Sistem", type: "system" },
-  { label: "Peringatan", type: "warning" },
-  
+  { label: "Semua", type: "all", icon: <Ionicons name="alert-circle" size={18} color="#EF4444" /> },
+  { label: "Keamanan", type: "security", icon: <Ionicons name="alert-circle" size={18} color="#EF4444" /> },
+  { label: "Servis", type: "service", icon: <Ionicons name="construct-outline" size={18} color="#3B82F6" /> },
+  { label: "Sistem", type: "system", icon: <Ionicons name="settings-outline" size={18} color="#0EA5E9" /> },
+  { label: "Peringatan", type: "warning", icon: <Ionicons name="warning-outline" size={18} color="#F59E0B" /> },
 ] as const;
 
-/* ================= TYPE MAP ================= */
-
-const TYPE_MAP: Record<
-  string,
-  { label: string; icon: React.ReactNode; bg: string }
-> = {
-  security: {
-    label: "Keamanan",
-    icon: <Ionicons name="alert-circle" size={22} color="#EF4444" />,
-    bg: "#FEE2E2",
-  },
-  service: {
-    label: "Servis",
-    icon: <Ionicons name="construct-outline" size={22} color="#3B82F6" />,
-    bg: "#DBEAFE",
-  },
-  system: {
-    label: "Sistem",
-    icon: <Ionicons name="settings-outline" size={22} color="#0EA5E9" />,
-    bg: "#E0F2FE",
-  },
-  warning: {
-    label: "Peringatan",
-    icon: <Ionicons name="warning-outline" size={22} color="#F59E0B" />,
-    bg: "#FEF3C7",
-  },
-};
-
 /* ================= TYPES ================= */
-
 interface NotificationItem {
   id: number;
   title: string;
@@ -61,43 +33,30 @@ interface NotificationItem {
   type: "security" | "service" | "system" | "warning";
   is_read: number;
   created_at: string;
+  excerpt?: string;
+  time?: string;
 }
 
 /* ================= SCREEN ================= */
-
 export default function NotificationScreen() {
   const insets = useSafeAreaInsets();
   const isDark = useColorScheme() === "dark";
-
-  const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [activeFilter, setActiveFilter] = useState("all");
   const [data, setData] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchNotifications("all");
-  }, []);
-
- 
-
-const markAllAsRead = async () => {
-  try {
-    await api.post("/notifications/read-all");
-  } catch (err) {
-    console.log("MARK READ ERROR:", err);
-  }
-};
-
- useFocusEffect(
-  useCallback(() => {
-    markAllAsRead();
-  }, [])
-);
-
+  /* ---------- Fetch Notifications ---------- */
   const fetchNotifications = async (type: string) => {
     try {
       setLoading(true);
-      const res = await api.get(`/notifications?type=${type}`);
-      setData(res.data.data);
+      const token = await getToken();
+      if (token) {
+        const res = await getNotification(token, type);
+        const filtered = type === "all" ? res : res.filter((item: any) => item.type === type);
+        setData(filtered);
+      } else {
+        Alert.alert("Error", "Token tidak ditemukan");
+      }
     } catch (e) {
       console.log("Gagal load notifikasi", e);
     } finally {
@@ -105,15 +64,27 @@ const markAllAsRead = async () => {
     }
   };
 
-  /* ================= RENDER ================= */
+  useEffect(() => {
+    fetchNotifications(activeFilter);
+  }, [activeFilter]);
+
+  /* ---------- Mark All as Read ---------- */
+  const markAllAsRead = async () => {
+    try {
+      await api.post("/notifications/read-all");
+    } catch (err) {
+      console.log("MARK READ ERROR:", err);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      markAllAsRead();
+    }, [])
+  );
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: isDark ? "#0F172A" : "#F8FAFC",
-      }}
-    >
+    <View style={{ flex: 1, backgroundColor: isDark ? "#0F172A" : "#F8FAFC" }}>
       {/* HEADER */}
       <View
         style={[
@@ -124,50 +95,36 @@ const markAllAsRead = async () => {
           },
         ]}
       >
-        <Text
-          style={[
-            styles.headerTitle,
-            { color: isDark ? "#F8FAFC" : "#0F172A" },
-          ]}
-        >
+        <Text style={[styles.headerTitle, { color: isDark ? "#F8FAFC" : "#0F172A" }]}>
           Notifikasi
         </Text>
 
         {/* FILTER */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {FILTERS.map((f) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {FILTERS.map((filter) => (
             <TouchableOpacity
-              key={f.type}
+              key={filter.type}
               style={[
                 styles.filterButton,
                 {
                   backgroundColor:
-                    activeFilter === f.type
-                      ? "#3B82F6"
-                      : isDark
-                      ? "#1E293B"
-                      : "#FFFFFF",
+                    activeFilter === filter.type ? "#3B82F6" : isDark ? "#1E293B" : "#FFFFFF",
                 },
               ]}
-              onPress={() => {
-                setActiveFilter(f.type);
-                fetchNotifications(f.type);
-              }}
+              onPress={() => setActiveFilter(filter.type)}
             >
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: "600",
-                  color:
-                    activeFilter === f.type ? "#FFFFFF" : "#64748B",
-                }}
-              >
-                {f.label}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                {filter.icon}
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: activeFilter === filter.type ? "#FFFFFF" : "#64748B",
+                  }}
+                >
+                  {filter.label}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -178,86 +135,43 @@ const markAllAsRead = async () => {
         data={data}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: 16 }}
-        refreshing={loading}
-        onRefresh={() => fetchNotifications(activeFilter)}
-        ListEmptyComponent={
-          !loading ? (
-            <Text
-              style={{
-                textAlign: "center",
-                marginTop: 40,
-                color: "#94A3B8",
-              }}
-            >
-              Tidak ada notifikasi
-            </Text>
-          ) : null
-        }
-        renderItem={({ item }) => {
-          const meta = TYPE_MAP[item.type];
-
-          return (
-            <View
-              style={[
-                styles.card,
-                {
-                  backgroundColor: isDark ? "#1E293B" : "#FFFFFF",
-                  opacity: item.is_read ? 0.6 : 1,
-                },
-              ]}
-            >
-              <View style={styles.cardRow}>
-                <View
-                  style={[
-                    styles.iconWrapper,
-                    { backgroundColor: meta?.bg },
-                  ]}
-                >
-                  {meta?.icon}
-                </View>
-
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={[
-                      styles.title,
-                      { color: isDark ? "#E5E7EB" : "#0F172A" },
-                    ]}
-                  >
-                    {item.title}
-                  </Text>
-                  <Text style={styles.message}>{item.message}</Text>
-                </View>
-
-                <Text style={styles.time}>
-                  {item.created_at ?? "Baru saja"}
-                </Text>
+        renderItem={({ item }) => (
+          <View style={[styles.card, { backgroundColor: isDark ? "#1E293B" : "#FFFFFF" }]}>
+            <View style={styles.cardRow}>
+              <View style={styles.iconWrapper}>
+                <Ionicons name="construct-outline" size={22} color="#3B82F6" />
               </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.title, { color: isDark ? "#E5E7EB" : "#0F172A" }]}>
+                  {item.title}
+                </Text>
+                <Text style={styles.message}>{item.excerpt ?? item.message}</Text>
+              </View>
+
+              <Text style={styles.time}>{item.time ?? item.created_at}</Text>
             </View>
-          );
-        }}
+          </View>
+        )}
       />
     </View>
   );
 }
 
 /* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingBottom: 14,
   },
-
   headerTitle: {
     fontSize: 22,
     fontWeight: "700",
     marginBottom: 12,
   },
-
   filterRow: {
     gap: 10,
   },
-
   filterButton: {
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -265,7 +179,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-
   card: {
     borderRadius: 14,
     padding: 14,
@@ -275,35 +188,30 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-
   cardRow: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
-
   iconWrapper: {
     width: 40,
     height: 40,
     borderRadius: 10,
+    backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
   },
-
   title: {
-    fontSize: 14,
     fontWeight: "600",
+    fontSize: 15,
+    marginBottom: 2,
   },
-
   message: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#64748B",
-    marginTop: 4,
   },
-
   time: {
     fontSize: 11,
     color: "#94A3B8",
-    marginLeft: 8,
+    marginLeft: 6,
   },
 });

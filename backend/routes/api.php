@@ -47,13 +47,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(hasNoVehicle::class)->group(function () {
         Route::post('vehicles', [VehicleController::class, 'store']);
     });
-
-    Route::middleware(hasVehicle::class)->group(function () {
-
-        Route::prefix('vehicles')->group(function () {
-
-            // Vehicle core
+    
+    Route::middleware(hasVehicle::class)->group(function() {
+        Route::prefix('vehicles')->group(function() {
             Route::put('/', [VehicleController::class, 'update']);
+            Route::put('{id}/updateOdometer', [VehicleController::class, 'updateOdometer']);
             Route::get('status', [VehicleController::class, 'vehicleStatus']);
             Route::get('detail', [VehicleController::class, 'vehicleDetail']);
 
@@ -77,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('services')->group(function () {
             Route::get('schedules', [ServiceController::class, 'serviceSchedules']);
             Route::get('/', [ServiceController::class, 'serviceHistories']);
+            Route::get('/types', [ServiceController::class, 'serviceTypes']);
             Route::get('{id}', [ServiceController::class, 'serviceHistory']);
             Route::post('/', [ServiceController::class, 'store']);
         });

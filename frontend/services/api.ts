@@ -2,7 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "http://10.249.18.179:8000/api", // Ganti IP Lan Backend dan harus satu jaringan cek di ipconfig
+  // Ganti baseURL sesuai IP backend yang aktif di jaringan lokal
+  baseURL: "http://192.168.3.7:8000/api",
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",

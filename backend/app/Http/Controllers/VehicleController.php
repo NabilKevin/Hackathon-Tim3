@@ -26,6 +26,9 @@ class VehicleController extends Controller
         return $file->storeAs('vehicles', $fileName, 'public');
     }
 
+    /**
+     * CREATE VEHICLE (ONBOARDING)
+     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -51,14 +54,8 @@ class VehicleController extends Controller
         $user = $request->user();
         $data = $validator->validated();
 
-        /** 
-         * ==============================
-         * TRANSACTION DATABASE ONLY
-         * ==============================
-         */
-        DB::beginTransaction();
+        DB::transaction(function () use ($data, $user, $request) {
 
-        try {
             $photoPath = $this->uploadFile($request->file('photo'), $user->id);
 
             $vehicle = Vehicle::create([
@@ -97,76 +94,124 @@ class VehicleController extends Controller
                 'longitude' => $data['longitude'],
             ]);
 
-            ServiceType::where('category', 'required')
-                ->each(function ($service) use ($vehicle, $user) {
-                    ServiceSchedule::create([
-                        'user_id' => $user->id,
-                        'vehicle_id' => $vehicle->id,
-                        'service_type_id' => $service->id,
-                        'km_target' => $service->interval_km,
-                        'date_target' => Carbon::now()
-                            ->addDays($service->interval_km / 50)
-                            ->toDateString(),
-                    ]);
-                });
+            ServiceType::where('category', 'required')->each(function ($service) use ($vehicle, $user) {
+                ServiceSchedule::create([
+                    'user_id' => $user->id,
+                    'vehicle_id' => $vehicle->id,
+                    'service_type_id' => $service->id,
+                    'km_target' => $service->interval_km,
+                    'date_target' => Carbon::now()->addDays($service->interval_km / 50)->toDateString(),
+                ]);
+            });
 
-            DB::commit();
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Gagal membuat kendaraan',
-                'error' => $e->getMessage()
-            ], 500);
+            createNotification(
+                $user->id,
+                $vehicle->id,
+                'Berhasil membuat kendaraan!',
+                "Kendaraan $vehicle->name dengan plat nomor $vehicle->plate_number telah berhasil dibuat! Silakan pasangkan perangkat pelacak untuk memulai pemantauan.",
+                'system'
+            );
+        });
+
+        return response()->json([
+            'message' => 'Berhasil membuat kendaraan!'
+        ], 200);
+    }
+
+    /**
+     * UPDATE VEHICLE
+     */
+    public function update(Request $request)
+    {
+        $user = $request->user();
+        $vehicle = Vehicle::firstWhere('user_id', $user->id);
+
+        if (!$vehicle) {
+            return response()->json(['message' => 'Kendaraan tidak ditemukan!'], 404);
         }
 
-        /**
-         * ==============================
-         * NOTIFICATION (OUTSIDE TRANSACTION)
-         * ==============================
-         */
+        if ($vehicle->user_id !== $user->id) {
+            return response()->json(['message' => 'Bukan kendaraan anda!'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|string',
+            'brand' => 'sometimes|string',
+            'transmission' => 'sometimes|string',
+            'year' => 'sometimes|integer|min:1900|max:' . now()->year,
+            'plate_number' => 'sometimes|unique:vehicles,plate_number,' . $vehicle->id,
+            'gas_type' => 'sometimes|string',
+            'machine_capacity' => 'sometimes|string',
+            'photo' => 'sometimes|image|mimes:jpg,png,jpeg,webp|max:2048',
+            'longitude' => 'sometimes|numeric|min:-180|max:180',
+            'latitude' => 'sometimes|numeric|min:-90|max:90',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Invalid field',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        // Upload photo
+        $path = $vehicle->photo_path;
+        if ($request->hasFile('photo')) {
+            $path = $this->uploadFile($request->file('photo'), $user->id);
+        }
+
+        // Update vehicle
+        $vehicle->update([
+            'name' => $data['name'] ?? $vehicle->name,
+            'brand' => $data['brand'] ?? $vehicle->brand,
+            'year' => $data['year'] ?? $vehicle->year,
+            'plate_number' => $data['plate_number'] ?? $vehicle->plate_number,
+            'photo_path' => $path,
+        ]);
+
+        // Update telemetry
+        $telemetry = VehicleTelemetry::firstWhere(['vehicle_id' => $vehicle->id]);
+        $telemetry->update([
+            'transmission' => $data['transmission'] ?? $telemetry->transmission,
+            'gas_type' => $data['gas_type'] ?? $telemetry->gas_type,
+            'machine_capacity' => $data['machine_capacity'] ?? $telemetry->machine_capacity,
+        ]);
+
+        // Update location
+        if (isset($data['longitude']) && isset($data['latitude'])) {
+            VehicleLocation::firstWhere(['vehicle_id' => $vehicle->id])->update([
+                'longitude' => $data['longitude'],
+                'latitude' => $data['latitude'],
+            ]);
+        }
 
         createNotification(
             $user->id,
             $vehicle->id,
-            'Kendaraan berhasil ditambahkan',
-            'Silakan hubungkan perangkat untuk mengaktifkan fitur keamanan.',
+            'Berhasil memperbarui kendaraan!',
+            "Kendaraan $vehicle->name dengan plat nomor $vehicle->plate_number telah berhasil diperbarui.",
             'system'
         );
 
-        
-
-        return response()->json([
-            'message' => 'Berhasil membuat kendaraan',
-            'vehicle_id' => $vehicle->id
-        ], 201);
+        return response()->json(['message' => 'Berhasil memperbarui kendaraan']);
     }
 
-
     /**
-     * VEHICLE STATUS (DASHBOARD + IOT READY)
+     * TOGGLE SECURITY FEATURE
      */
+    
+
+    // ===================== VEHICLE STATUS =====================
     public function vehicleStatus()
     {
         $user = Auth::user();
-        $vehicle = Vehicle::where('user_id', $user->id)
-            ->with(['telemetry', 'location', 'security'])
-            ->first();
+        $vehicle = Vehicle::where('user_id', $user->id)->with(['telemetry', 'location', 'security'])->first();
+        if (!$vehicle) return response()->json(['message' => 'Kendaraan belum tersedia'], 404);
 
-        if (!$vehicle) {
-            return response()->json([
-                'message' => 'Kendaraan belum tersedia'
-            ], 404);
-        }
-
-        $deviceConnected = DevicePairingLog::where('vehicle_id', $vehicle->id)
-            ->where('action', 'paired')
-            ->exists();
-
-        if (!$deviceConnected) {
-            return response()->json([
-                'message' => 'Device belum terhubung'
-            ], 409);
-        }
+        $deviceConnected = DevicePairingLog::where('vehicle_id', $vehicle->id)->where('action', 'paired')->exists();
+        if (!$deviceConnected) return response()->json(['message' => 'Device belum terhubung'], 409);
 
         return response()->json([
             'message' => 'Berhasil mendapatkan status kendaraan',
@@ -178,45 +223,37 @@ class VehicleController extends Controller
                 ],
                 'telemetry' => [
                     'odometer' => $vehicle->telemetry->odometer,
-                    'rpm' => rand(800, 3000), // simulasi
+                    'rpm' => rand(800, 3000),
                     'battery' => $vehicle->telemetry->accumulator,
                     'fuel' => $vehicle->telemetry->gas_level,
                     'engine_status' => $vehicle->telemetry->engine_status,
                     'alarm_status' => $vehicle->telemetry->alarm_status,
-
                 ],
                 'security' => [
-                    'alarm_enabled' => (bool) $vehicle->security->alarm_enabled,
-                    'remote_engine_cut' => (bool) $vehicle->security->remote_engine_cut,
-                    'anti_theft_enabled' => (bool) $vehicle->security->anti_theft_enabled,
-                ]
+                    'alarm_enabled' => (bool)$vehicle->security->alarm_enabled,
+                    'remote_engine_cut' => (bool)$vehicle->security->remote_engine_cut,
+                    'anti_theft_enabled' => (bool)$vehicle->security->anti_theft_enabled,
+                ],
             ]
         ]);
     }
 
-    /**
-     * VEHICLE DETAIL (PROFILE + DEVICE)
-     */
     public function vehicleDetail()
     {
         $user = Auth::user();
         $vehicle = Vehicle::firstWhere('user_id', $user->id);
-
-        if (!$vehicle) {
-            return response()->json(['message' => 'Kendaraan tidak ditemukan'], 404);
-        }
+        if (!$vehicle) return response()->json(['message' => 'Kendaraan tidak ditemukan'], 404);
 
         $telemetry = VehicleTelemetry::firstWhere('vehicle_id', $vehicle->id);
         $security = VehicleSecuritySetting::firstWhere('vehicle_id', $vehicle->id);
 
-        $deviceConnected = DevicePairingLog::where('vehicle_id', $vehicle->id)
-            ->where('action', 'paired')
-            ->exists();
+        $deviceConnected = DevicePairingLog::where('vehicle_id', $vehicle->id)->where('action', 'paired')->exists();
 
         return response()->json([
             'message' => 'Berhasil mendapatkan detail kendaraan',
             'data' => [
-                'name' => "{$vehicle->brand} {$vehicle->name}",
+                'name' => $vehicle->name,
+                'brand' => $vehicle->brand,
                 'plate_number' => $vehicle->plate_number,
                 'year' => $vehicle->year,
                 'odometer' => $telemetry->odometer,
@@ -232,10 +269,7 @@ class VehicleController extends Controller
     public function telemetry()
     {
         $vehicle = Vehicle::firstWhere('user_id', Auth::id());
-
-        if (!$vehicle) {
-            return response()->json(['message' => 'Kendaraan tidak ditemukan'], 404);
-        }
+        if (!$vehicle) return response()->json(['message' => 'Kendaraan tidak ditemukan'], 404);
 
         return response()->json([
             'engine_status' => $vehicle->telemetry->engine_status,
@@ -246,19 +280,39 @@ class VehicleController extends Controller
 
     public function pairDevice(Request $request)
     {
-        $request->validate([
-            'device_id' => 'required|string'
-        ]);
-
+        $request->validate(['device_id' => 'required|string']);
         $vehicle = Vehicle::firstWhere('user_id', Auth::id());
-
         $vehicle->update([
             'device_id' => $request->device_id,
             'device_connected_at' => now()
         ]);
 
-        return response()->json([
-            'message' => 'Device berhasil terhubung'
-        ]);
+        return response()->json(['message' => 'Device berhasil terhubung']);
+    }
+
+    public function updateOdometer(Request $request, $id)
+    {
+        $user = $request->user();
+        $vehicle = Vehicle::firstWhere('user_id', $user->id);
+
+        if (!$vehicle) return response()->json(['message' => 'Kendaraan tidak ditemukan!'], 404);
+        if ($vehicle->user_id !== $user->id) return response()->json(['message' => 'Bukan kendaraan anda!'], 403);
+
+        $validator = Validator::make($request->all(), ['odometer' => 'required|numeric']);
+        if ($validator->fails()) return response()->json(['message' => 'Invalid field', 'errors' => $validator->errors()], 422);
+
+        $data = $validator->validated();
+        $telemetry = VehicleTelemetry::firstWhere('vehicle_id', $id);
+        $telemetry->update($data);
+
+        if ($vehicle->last_notified_service + 200 >= $data['odometer']) {
+            ServiceType::where('category', 'required')->get()->map(function($service) use($vehicle, $user) {
+                createNotification($user->id, $vehicle->id, 'Pengigat service!', "Jangan lupa untuk servis $service->name, $service->km_target km lagi!", 'service');
+            });
+
+            $vehicle->update(['last_notified_service' => $data['odometer']]);
+        }
+
+        return response()->json(['message' => 'Berhasil update odometer!'], 200);
     }
 }

@@ -1,8 +1,9 @@
+import { getUser } from "@/services/auth";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router } from "expo-router";
-import React from "react";
+import React, { use, useEffect, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -15,7 +16,22 @@ import {
 
 export default function Account() {
   const isDark = useColorScheme() === "dark";
+  const [user, setUser] = useState({
+    username: "",
+    email: "",
+    image: "",
+  });
 
+  const fetchData = async () => {
+    const data = await getUser();
+    console.log(data);
+    
+    setUser(data);
+  }
+
+  useEffect(() => {
+    fetchData();
+  }, []);
   return (
     <ScrollView
       style={[
@@ -26,15 +42,15 @@ export default function Account() {
       {/* PROFILE HEADER */}
       <View style={styles.header}>
         <Image
-          source={require("../../assets/images/profil-default.jpg")}
+          source={user?.image ? { uri: user.image } : require("../../assets/images/profil-default.jpg")}
           style={styles.avatar}
         />
 
         <Text style={[styles.name, { color: isDark ? "#fff" : "#1F2D5A" }]}>
-          Budi Santoso
+          {user?.username}
         </Text>
         <Text style={[styles.email, { color: isDark ? "#9DA5C5" : "#6B7280" }]}>
-          budi.santoso@email.com
+          {user?.email}
         </Text>
 
         <TouchableOpacity

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('vehicle_telemetries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('vehicle_id')->constrained()->onDelete('cascade');
-            $table->float('odometer')->nullable();
+            $table->unsignedBigInteger('odometer')->nullable();
             $table->float('accumulator')->nullable(); // biasanya voltase aki
             $table->string('transmission')->nullable();
             $table->float('gas_level')->nullable();

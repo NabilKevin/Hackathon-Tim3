@@ -1,7 +1,8 @@
+import { getToken, getUser, updateUser } from "@/services/auth";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import {
     Image,
     ScrollView,
@@ -16,12 +17,12 @@ import {
 export default function EditProfileScreen() {
   const isDark = useColorScheme() === "dark";
 
-  const [username, setUsername] = useState("Handika"); // contoh default
-  const [email, setEmail] = useState("handika@mail.com");
+  const [username, setUsername] = useState(""); // contoh default
+  const [email, setEmail] = useState("");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [image, setImage] = useState<string | null>(null);
+  const [image, setImage] = useState<any>(null);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -30,35 +31,82 @@ export default function EditProfileScreen() {
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setImage(result.assets[0]);
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    const token = await getToken();
+    if (!token) {
+      alert("Token tidak ditemukan!");
+      return;
+    }
     if (!username || !email) {
       alert("Username dan Email wajib diisi!");
       return;
     }
 
+    const data = new FormData()
+
+    data.append("username", username);
+    data.append("email", email);
+
     if (newPassword || confirmPassword || oldPassword) {
       if (!oldPassword) return alert("Masukkan password lama!");
       if (newPassword !== confirmPassword)
         return alert("Password baru dan konfirmasi tidak sama!");
+
+      data.append("current_password",oldPassword);
+      data.append("password",newPassword);
+      data.append("password_confirmation",confirmPassword);
     }
 
-    const payload = {
-      username,
-      email,
-      updatePassword: newPassword ? true : false,
-      oldPassword,
-      newPassword,
-      image,
-    };
+    if(image) {
+      const mimeType =
+        image.mimeType ||
+        (image.uri.endsWith('.png') ? 'image/png' : 'image/jpeg');
+      console.log({
+        uri: image.uri,
+        type: mimeType,
+        name: image.fileName || 'photo.jpg',
+      });
+      
+      data.append('image', {
+        uri: image.uri,
+        type: mimeType,
+        name: image.fileName || 'photo.jpg',
+      } as any);
 
-    console.log("DATA UPDATE PROFIL:", payload);
-    alert("Profil berhasil diperbarui!");
-    router.back();
+    }
+    
+    try {
+      await updateUser(token, data)
+      alert("Profil berhasil diperbarui!");
+      router.back();
+    } catch (error: any) {
+      if (error.response) {
+        console.log('Server error:', error.response.data);
+      } else if (error.request) {
+        console.log('No response from server');
+      } else {
+        console.log('Error:', error.message);
+      }
+
+      return alert("Terjadi kesalahan saat memperbarui profil.");
+    }
+
   };
+
+  const fetchData = async () => {
+    const data = await getUser();
+    setEmail(data.email);
+    setUsername(data.username);
+    setImage(data.image || null);
+  }
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   return (
     <ScrollView
@@ -101,7 +149,7 @@ export default function EditProfileScreen() {
 
       {image && (
         <Image
-          source={{ uri: image }}
+          source={{ uri: image.uri }}
           style={{
             width: 120,
             height: 120,

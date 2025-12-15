@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\NotificationResource;
 use App\Models\Notification;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -54,6 +55,7 @@ class NotificationController extends Controller
 
         $notifications = $notifications->map(function($notification) {
             $notification['excerpt'] = Str::limit($notification->content, 60, '...');
+            $notification['time'] = $notification->created_at->diffForHumans();
             return $notification;
         });
 

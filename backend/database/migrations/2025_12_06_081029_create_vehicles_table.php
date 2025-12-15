@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('plate_number')->unique();
             $table->enum('status', ['active', 'nonactive'])->default('active');
             $table->string('photo_path')->nullable();
+            $table->unsignedBigInteger('last_notified_service')->nullable();
             $table->timestamps();
         });
     }

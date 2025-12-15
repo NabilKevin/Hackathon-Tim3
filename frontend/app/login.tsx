@@ -1,10 +1,11 @@
 import { api } from "@/services/api";
-import { saveToken } from "@/services/auth";
+import { saveToken, saveUser } from "@/services/auth";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from "react-native";
+
 export default function Login() {
 
   const theme = useColorScheme();
@@ -25,6 +26,7 @@ export default function Login() {
 
       const token = res.data.token;
       await saveToken(token);
+      await saveUser(res.data.user);
 
       Alert.alert("Login Berhasil!");
       
@@ -265,5 +267,9 @@ const styles = StyleSheet.create({
   link: {
     color: "#3B82F6",
     fontWeight: "600",
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
   },
 });
