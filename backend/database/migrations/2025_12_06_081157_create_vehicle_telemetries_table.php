@@ -20,6 +20,8 @@ return new class extends Migration
             $table->float('gas_level')->nullable();
             $table->string('gas_type')->nullable();
             $table->string('machine_capacity')->nullable();
+            $table->boolean('engine_status')->boolean();
+            $table->boolean('alarm_status')->boolean();
             $table->timestamps();
         });
     }
