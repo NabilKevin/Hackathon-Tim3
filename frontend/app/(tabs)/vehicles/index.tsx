@@ -208,7 +208,7 @@ export default function Vehicles() {
             Kapasitas Mesin
           </Text>
           <Text style={[styles.detailValue, { color: isDark ? "#fff" : "#000" }]}>
-            {data.machine_capacity ?? "-"} cc
+            {data.machine_capacity ?? "-"}
           </Text>
         </View>
       </View>
