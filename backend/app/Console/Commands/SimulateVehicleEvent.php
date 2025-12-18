@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Services\RealtimeService;
 use Illuminate\Console\Command;
 use App\Models\Vehicle;
 use App\Http\Services\VehicleSecurityService;
@@ -27,9 +28,12 @@ class SimulateVehicleEvent extends Command
      */
     public function handle()
     {
+
+
         $vehicles = Vehicle::with([
             'notificationTrigger',
-            'securitySetting'
+            'securitySetting',
+            'telemetry'
         ])->get();
 
         if ($vehicles->isEmpty()) {
@@ -61,8 +65,10 @@ class SimulateVehicleEvent extends Command
 
             // 40% probability (realistic IoT noise)
             if (rand(1, 100) <= 10) {
+                
                 $event = $events[array_rand($events)];
 
+                RealtimeService::handleEvent($vehicle);
                 VehicleSecurityService::handleEvent($vehicle, $event);
 
                 $this->info("Simulated {$event} for vehicle #{$vehicle->id}");
