@@ -26,17 +26,26 @@ export const logout = async () => {
 };
 
 export const getUser = async () => {
-  const user = await AsyncStorage.getItem("user");
-  return user ? JSON.parse(user) : null;
-}
+  try {
+    const user = await AsyncStorage.getItem("user");
+    
+    // Parse hanya jika data ada
+    return user ? JSON.parse(user) : null;
+    
+  } catch (error) {
+    // Jika terjadi error (misal data korup/bukan JSON valid)
+    console.error("Gagal mengambil user dari storage:", error);
+    return null;
+  }
+};
 
 export const updateUser = async (token: string, data: any) => {
   
-  const response = await api.put("/update-profile", data, {
+  const response = await api.post("/update-profile", data, {
     headers: {
       Authorization: `Bearer ${token}`,
       'Accept': 'application/json',
-      // "Content-Type": "multipart/form-data",
+      "Content-Type": "multipart/form-data",
     },
   });
   

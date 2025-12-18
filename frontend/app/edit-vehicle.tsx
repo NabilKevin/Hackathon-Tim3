@@ -1,4 +1,4 @@
-import { storageurl } from "@/services/api";
+import { storageurl } from "@/services/api"; // Import URL Storage
 import { getToken } from "@/services/auth";
 import { getVehicleDetail, updateVehicle } from "@/services/vehicle";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,8 +18,6 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-
-
 
 export default function EditVehicleScreen() {
   const isDark = useColorScheme() === "dark";
@@ -100,7 +98,6 @@ export default function EditVehicleScreen() {
       const formData = new FormData();
 
       // Backend Method Spoofing (PENTING untuk update file via FormData)
-      // Karena method PUT native sering bermasalah dengan Multipart/FormData
       formData.append("_method", "PUT"); 
 
       formData.append("name", vehicleName);
@@ -118,14 +115,13 @@ export default function EditVehicleScreen() {
         const type = match ? `image/${match[1]}` : `image/jpeg`;
 
         formData.append("photo", {
-          uri: Platform.OS === 'android' ? image : image.replace('file://', ''),
-          name: filename || "vehicle_update.jpg",
-          type: type,
+            uri: Platform.OS === 'android' ? image : image.replace('file://', ''),
+            name: filename || "vehicle_update.jpg",
+            type: type,
         } as any);
       }
       
       // Pastikan fungsi updateVehicle di service Anda support FormData
-      // dan headers 'Content-Type': 'multipart/form-data'
       await updateVehicle(token, formData);
 
       Alert.alert("Berhasil", "Data kendaraan berhasil diperbarui!", [

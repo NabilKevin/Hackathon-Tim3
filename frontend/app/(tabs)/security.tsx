@@ -31,27 +31,27 @@ export default function SecurityScreen() {
   const [loading, setLoading] = useState(true);
 
   const fetchSecurity = async () => {
-  try {
-    const res = await api.get("/vehicles/security");
-    const data = res.data.data;
+    try {
+      const res = await api.get("/vehicles/security");
+      const data = res.data.data;
 
-    // convert 0/1 ke boolean
-    setSecurity({
-      anti_theft_enabled: !!data.anti_theft_enabled,
-      geofence_enabled: !!data.geofence_enabled,
-      geofence_radius: data.geofence_radius,
-      alarm_enabled: !!data.alarm_enabled,
-      remote_engine_cut: !!data.remote_engine_cut,
-      engine_on: !!data.engine_on,
-      vibration: !!data.vibration,
-      wheel_move: !!data.wheel_move,
-    });
-  } catch (e) {
-    console.log("Gagal load security", e);
-  } finally {
-    setLoading(false);
-  }
-};
+      // convert 0/1 ke boolean
+      setSecurity({
+        anti_theft_enabled: !!data.anti_theft_enabled,
+        geofence_enabled: !!data.geofence_enabled,
+        geofence_radius: data.geofence_radius,
+        alarm_enabled: !!data.alarm_enabled,
+        remote_engine_cut: !!data.remote_engine_cut,
+        engine_on: !!data.engine_on,
+        vibration: !!data.vibration,
+        wheel_move: !!data.wheel_move,
+      });
+    } catch (e) {
+      console.log("Gagal load security", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ----------------- FOCUS EFFECT -----------------
   useFocusEffect(
@@ -61,57 +61,57 @@ export default function SecurityScreen() {
   );
 
   const toggleSecurity = async (field: keyof typeof security, value: boolean) => {
-  try {
-    let newState = { ...security };
+    try {
+      let newState = { ...security };
 
-    // Anti-Theft dimatikan -> matikan semua fitur terkait
-    if (field === "anti_theft_enabled") {
-      newState.anti_theft_enabled = value;
+      // Anti-Theft dimatikan -> matikan semua fitur terkait
+      if (field === "anti_theft_enabled") {
+        newState.anti_theft_enabled = value;
 
-      if (!value) {
-        newState.remote_engine_cut = false;
-        newState.alarm_enabled = false;
-        newState.engine_on = false;
-        newState.vibration = false;
-        newState.wheel_move = false;
+        if (!value) {
+          newState.remote_engine_cut = false;
+          newState.alarm_enabled = false;
+          newState.engine_on = false;
+          newState.vibration = false;
+          newState.wheel_move = false;
+        }
+      } else {
+        // Cek jika Anti-Theft mati, jangan izinkan menyalakan fitur lain
+        if (!security.anti_theft_enabled && value === true) {
+          console.log("Fitur keamanan hanya bisa dinyalakan jika Anti-Theft aktif");
+          return;
+        }
+        (newState as any)[field] = value;
       }
-    } else {
-      // Cek jika Anti-Theft mati, jangan izinkan menyalakan fitur lain
-      if (!security.anti_theft_enabled && value === true) {
-        console.log("Fitur keamanan hanya bisa dinyalakan jika Anti-Theft aktif");
-        return;
+
+      // Optimistic UI
+      setSecurity(newState);
+
+      // Kirim ke API
+      if (field === "anti_theft_enabled") {
+        // Jika Anti-Theft dimatikan, update semua field ke API
+        if (!value) {
+          await Promise.all([
+            api.post("/vehicles/security/toggle", { anti_theft_enabled: false }),
+            api.post("/vehicles/security/toggle", { remote_engine_cut: false }),
+            api.post("/vehicles/security/toggle", { alarm_enabled: false }),
+            api.post("/vehicles/security/toggle", { engine_on: false }),
+            api.post("/vehicles/security/toggle", { vibration: false }),
+            api.post("/vehicles/security/toggle", { wheel_move: false }),
+          ]);
+          return;
+        }
       }
-      (newState as any)[field] = value;
+
+      // Update single feature biasa
+      await api.post("/vehicles/security/toggle", { [field]: value });
+    } catch (e) {
+      console.log("Gagal update", field);
+
+      // rollback UI
+      fetchSecurity();
     }
-
-    // Optimistic UI
-    setSecurity(newState);
-
-    // Kirim ke API
-    if (field === "anti_theft_enabled") {
-      // Jika Anti-Theft dimatikan, update semua field ke API
-      if (!value) {
-        await Promise.all([
-          api.post("/vehicles/security/toggle", { anti_theft_enabled: false }),
-          api.post("/vehicles/security/toggle", { remote_engine_cut: false }),
-          api.post("/vehicles/security/toggle", { alarm_enabled: false }),
-          api.post("/vehicles/security/toggle", { engine_on: false }),
-          api.post("/vehicles/security/toggle", { vibration: false }),
-          api.post("/vehicles/security/toggle", { wheel_move: false }),
-        ]);
-        return;
-      }
-    }
-
-    // Update single feature biasa
-    await api.post("/vehicles/security/toggle", { [field]: value });
-  } catch (e) {
-    console.log("Gagal update", field);
-
-    // rollback UI
-    fetchSecurity();
-  }
-};
+  };
 
   const theme = {
     background: isDark ? "#0C0F14" : "#F6F8FC",
@@ -171,7 +171,9 @@ export default function SecurityScreen() {
         <View style={styles.sliderBar}>
           <View style={styles.sliderFill} />
         </View>
-        <Text style={[styles.radiusText, { color: theme.subtext }]}>Radius: {security.geofence_radius}m</Text>
+        <Text style={[styles.radiusText, { color: theme?.subtext }]}>
+          Radius: {security?.geofence_radius ?? 0}m
+        </Text>
       </View>
 
       {/* Notification Trigger */}

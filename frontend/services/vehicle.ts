@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "./api";
 
 export const getServiceHistories = async (token: string) => {
@@ -37,13 +36,14 @@ export const getVehicleDetail = async (token: string) => {
   return response.data?.data;
 };
 
+// FIXED: Update Vehicle dengan FormData
 export const updateVehicle = async (token: string, formData: FormData) => {
-  return api.post('/vehicles', formData, { // Pakai POST jika pakai _method: PUT
+  // Gunakan POST karena FormData membutuhkan multipart/form-data
+  // Laravel akan membaca _method: 'PUT' dari dalam body FormData
+  return api.post('/vehicles', formData, { 
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'multipart/form-data',
-      method: 'PUT',
     },
   });
 };
-
