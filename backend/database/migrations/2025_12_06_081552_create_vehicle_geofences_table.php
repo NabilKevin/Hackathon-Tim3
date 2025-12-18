@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('vehicle_id')->constrained()->onDelete('cascade');
             $table->decimal('latitude', 10, 7);
             $table->decimal('longitude', 10, 7);
-            $table->integer('radius'); // dalam meter
+            $table->integer('radius')->default(1000); // dalam meter
             $table->timestamps();
         });
     }

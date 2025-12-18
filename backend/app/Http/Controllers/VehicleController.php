@@ -215,34 +215,45 @@ class VehicleController extends Controller
     public function vehicleStatus()
     {
         $user = Auth::user();
-        $vehicle = Vehicle::where('user_id', $user->id)->with(['telemetry', 'location', 'security'])->first();
+        $vehicle = Vehicle::where('user_id', $user->id)->with(['telemetry', 'location', 'security', 'geofence'])->first();
         if (!$vehicle) return response()->json(['message' => 'Kendaraan belum tersedia'], 404);
 
         $deviceConnected = DevicePairingLog::where('vehicle_id', $vehicle->id)->where('action', 'paired')->exists();
         if (!$deviceConnected) return response()->json(['message' => 'Device belum terhubung'], 409);
 
+        $data = [
+            'vehicle' => [
+                'name' => "{$vehicle->brand} {$vehicle->name}",
+                'latitude' => $vehicle->location->latitude,
+                'longitude' => $vehicle->location->longitude,
+            ],
+            'telemetry' => [
+                'odometer' => $vehicle->telemetry->odometer,
+                'rpm' => rand(800, 3000),
+                'battery' => $vehicle->telemetry->accumulator,
+                'fuel' => $vehicle->telemetry->gas_level,
+                'engine_status' => $vehicle->telemetry->engine_status,
+                'alarm_status' => $vehicle->telemetry->alarm_status,
+            ],
+            'security' => [
+                'alarm_enabled' => (bool)$vehicle->security->alarm_enabled,
+                'remote_engine_cut' => (bool)$vehicle->security->remote_engine_cut,
+                'anti_theft_enabled' => (bool)$vehicle->security->anti_theft_enabled,
+                'geofence_enabled' => (bool)$vehicle->security->geofence_enabled,
+            ],
+        ];
+
+        if($vehicle->security->geofence_enabled) {
+            $data['geofence'] = [
+                'latitude' => $vehicle->geofence->latitude,
+                'longitude' => $vehicle->geofence->longitude,
+                'radius' => $vehicle->geofence->radius,
+            ];
+        }
+
         return response()->json([
             'message' => 'Berhasil mendapatkan status kendaraan',
-            'data' => [
-                'vehicle' => [
-                    'name' => "{$vehicle->brand} {$vehicle->name}",
-                    'latitude' => $vehicle->location->latitude,
-                    'longitude' => $vehicle->location->longitude,
-                ],
-                'telemetry' => [
-                    'odometer' => $vehicle->telemetry->odometer,
-                    'rpm' => rand(800, 3000),
-                    'battery' => $vehicle->telemetry->accumulator,
-                    'fuel' => $vehicle->telemetry->gas_level,
-                    'engine_status' => $vehicle->telemetry->engine_status,
-                    'alarm_status' => $vehicle->telemetry->alarm_status,
-                ],
-                'security' => [
-                    'alarm_enabled' => (bool)$vehicle->security->alarm_enabled,
-                    'remote_engine_cut' => (bool)$vehicle->security->remote_engine_cut,
-                    'anti_theft_enabled' => (bool)$vehicle->security->anti_theft_enabled,
-                ],
-            ]
+            'data' => $data
         ]);
     }
 

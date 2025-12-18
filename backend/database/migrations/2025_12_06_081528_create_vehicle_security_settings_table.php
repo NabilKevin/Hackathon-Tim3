@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('vehicle_id')->constrained()->onDelete('cascade');
             $table->boolean('anti_theft_enabled')->default(false);
             $table->boolean('geofence_enabled')->default(false);
-            $table->integer('geofence_radius')->default(100); // dalam meter
             $table->boolean('alarm_enabled')->default(false);
             $table->boolean('remote_engine_cut')->default(false);
             $table->timestamps();

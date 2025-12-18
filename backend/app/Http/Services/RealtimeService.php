@@ -42,8 +42,8 @@ class RealtimeService
         self::sendOdometerUpdate($vehicle);
 
         $vehicle->location->update([
-            'latitude' => $vehicle->location->latitude + (rand(-5, 5) / 100),
-            'longitude' => $vehicle->location->longitude + (rand(-5, 5) / 100),
+            'latitude' => $vehicle->location->latitude + (rand(-2, 2) / 100),
+            'longitude' => $vehicle->location->longitude + (rand(-2, 2) / 100),
         ]);
 
         if ($vehicle->last_notified_service + 200 >= $vehicle->telemetry->odometer) {

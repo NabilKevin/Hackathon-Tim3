@@ -25,9 +25,9 @@ class Vehicle extends Model
     {
         return $this->hasOne(VehicleTelemetry::class, 'vehicle_id', 'id');
     }
-    public function geofences()
+    public function geofence()
     {
-        return $this->hasMany(VehicleGeofence::class, 'vehicle_id', 'id');
+        return $this->hasOne(VehicleGeofence::class, 'vehicle_id', 'id');
     }
     public function location()
     {
