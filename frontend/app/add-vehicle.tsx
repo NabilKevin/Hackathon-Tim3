@@ -1,8 +1,9 @@
 import { api } from "@/services/api";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location"; // PENTING: Jangan lupa import ini
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -29,15 +30,43 @@ export default function AddVehicleScreen() {
   const [engine, setEngine] = useState("");
   const [image, setImage] = useState<string | null>(null);
   
-  // State loading agar user tidak tekan tombol berkali-kali
+  // State Lokasi & Loading
+  const [location, setLocation] = useState<{lat: string, lng: string} | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // 1. Ambil Lokasi Saat Layar Dibuka
+  useEffect(() => {
+    (async () => {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert("Izin Ditolak", "Izin lokasi diperlukan untuk menyimpan titik awal kendaraan.");
+          return;
+        }
+
+        let currentLocation = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+        });
+
+        setLocation({
+            lat: currentLocation.coords.latitude.toString(),
+            lng: currentLocation.coords.longitude.toString()
+        });
+        
+        console.log("Lokasi ditemukan:", currentLocation.coords);
+
+      } catch (error) {
+        Alert.alert("Gagal", "Tidak bisa mengambil lokasi GPS.");
+      }
+    })();
+  }, []);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Gunakan enum yang benar
-      allowsEditing: true, // Biarkan user crop gambar agar rapi
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.5, // Turunkan quality agar upload lebih cepat & ringan
+      quality: 0.5,
     });
 
     if (!result.canceled) {
@@ -46,8 +75,7 @@ export default function AddVehicleScreen() {
   };
 
   const handleSave = async () => {
-    // 1. VALIDASI FRONTEND LEBIH KETAT
-    // Cek semua field jika memang di backend wajib
+    // Validasi Field
     if (!vehicleName || !brand || !year || !plate || !transmission || !fuel || !engine) {
       Alert.alert("Validasi Gagal", "Mohon lengkapi semua formulir!");
       return;
@@ -57,6 +85,10 @@ export default function AddVehicleScreen() {
       Alert.alert("Validasi Gagal", "Foto kendaraan wajib diupload!");
       return;
     }
+
+    // Validasi Lokasi (Optional: Bisa dipaksa atau dikasih default 0,0)
+    const lat = location?.lat || "-6.200000"; 
+    const lng = location?.lng || "106.816666";
 
     try {
       setLoading(true);
@@ -71,12 +103,11 @@ export default function AddVehicleScreen() {
       formData.append("gas_type", fuel);
       formData.append("machine_capacity", engine);
 
-      // Dummy GPS
-      formData.append("latitude", "-6.2741");
-      formData.append("longitude", "106.85");
+      // Gunakan Lokasi Asli
+      formData.append("latitude", lat);
+      formData.append("longitude", lng);
 
-      // 2. FORM DATA IMAGE FIX (PENTING!)
-      // Kadang Android butuh nama file & tipe yang spesifik
+      // Upload Gambar
       const filename = image.split('/').pop();
       const match = /\.(\w+)$/.exec(filename || "");
       const type = match ? `image/${match[1]}` : `image/jpeg`;
@@ -87,7 +118,7 @@ export default function AddVehicleScreen() {
         type: type,
       } as any);
 
-      console.log("Sending Data:", formData); // Cek di terminal apa yang dikirim
+      console.log("Sending Data:", formData);
 
       await api.post("/vehicles", formData, {
         headers: {
@@ -115,15 +146,13 @@ export default function AddVehicleScreen() {
       ]);
 
     } catch (error: any) {
-      console.error("ERROR UPLOAD:", error.response?.data); // Lihat error detail di console
+      console.error("ERROR UPLOAD:", error.response?.data);
       
-      // Ambil pesan error spesifik dari backend jika ada
       const serverMessage = error.response?.data?.message;
       const validationErrors = error.response?.data?.errors;
       
       let finalMessage = serverMessage || "Gagal menambahkan kendaraan";
 
-      // Jika ada error validasi per field (biasanya dari Laravel/Node)
       if (validationErrors) {
         const firstError = Object.values(validationErrors)[0];
         if (Array.isArray(firstError)) {
@@ -169,6 +198,13 @@ export default function AddVehicleScreen() {
       <InputField label="Bahan Bakar" value={fuel} onChange={setFuel} placeholder="Pertalite" />
       <InputField label="Kapasitas Mesin" value={engine} onChange={setEngine} placeholder="150" keyboardType="numeric"/>
 
+      {/* INDIKATOR LOKASI (Opsional agar user tahu) */}
+      <View style={{ marginBottom: 15 }}>
+          <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 12 }}>
+             📍 Lokasi Awal: {location ? `${location.lat}, ${location.lng}` : "Sedang mengambil..."}
+          </Text>
+      </View>
+
       {/* IMAGE PICKER */}
       <Text style={[styles.label, { color: isDark ? "#e2e8f0" : "#334155" }]}>
         Upload Gambar Motor
@@ -212,7 +248,7 @@ export default function AddVehicleScreen() {
   );
 }
 
-/* Reusable Input Component (Tidak Berubah) */
+/* Reusable Input Component */
 type InputProps = {
   label: string;
   value: string;
@@ -286,7 +322,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginTop: 25,
-    backgroundColor: "#51a2ff20", // Transparan sedikit
+    backgroundColor: "#51a2ff20", 
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",

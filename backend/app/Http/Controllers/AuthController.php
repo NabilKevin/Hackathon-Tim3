@@ -82,20 +82,20 @@ class AuthController extends Controller
         ], 200);
     }
 
-//     public function savePushToken(Request $request)
-// {
-//     $request->validate([
-//         'expo_push_token' => 'required|string'
-//     ]);
+    public function savePushToken(Request $request)
+{
+    $request->validate([
+        'expo_push_token' => 'required|string'
+    ]);
 
-//     $request->user()->update([
-//         'expo_push_token' => $request->expo_push_token
-//     ]);
+    $request->user()->update([
+        'expo_push_token' => $request->expo_push_token
+    ]);
 
-//     return response()->json([
-//         'message' => 'Push token saved'
-//     ]);
-// }
+    return response()->json([
+        'message' => 'Push token saved'
+    ]);
+}
 
 
     /**
@@ -205,53 +205,66 @@ class AuthController extends Controller
      *   }
      * }
      */
-    public function update(Request $request)
-    {
-        $user = $request->user();
-        $rule = [
-            'username' => 'sometimes|min:4|unique:users,username,' . $user->id ,
-            'email' => 'sometimes|email:dns|unique:users,email,' . $user->id ,
-            'password' => 'sometimes|string|min:8|confirmed',
-            'current_password' => 'sometimes|string|required_with:password',
-            'image' => 'sometimes|image|mimes:jpg,png,jpeg,webp|max:2048',
-        ];
-        $validator = Validator::make($request->all(), $rule);
+   public function update(Request $request)
+{
+    $user = $request->user();
 
-        if ($validator->fails()) {
+    $rule = [
+        'username' => 'sometimes|min:4|unique:users,username,' . $user->id,
+        'email'    => 'sometimes|email:dns|unique:users,email,' . $user->id,
+        'password' => 'sometimes|string|min:8|confirmed',
+        'current_password' => 'sometimes|string|required_with:password',
+        // Validasi tetap menggunakan 'photo_profile'
+        'photo_profile'    => 'sometimes|image|mimes:jpg,png,jpeg,webp|max:2048', 
+    ];
+
+    $validator = Validator::make($request->all(), $rule);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'message' => 'Kolom tidak valid',
+            'errors'  => $validator->errors(),
+        ], 422);
+    }
+
+    // Ambil data yang sudah divalidasi
+    $data = $validator->validated();
+
+    // Logic Password
+    if ($request->filled('password')) {
+        if (!Hash::check($request->current_password, $user->password)) {
             return response()->json([
-                'message' => 'Kolom tidak valid',
-                'errors' => $validator->errors(),
-                'data' => $request->all(),
-                's' => $request->file('image')
+                'message' => 'Validasi Gagal',
+                'errors'  => ['current_password' => ['Password lama tidak sesuai.']]
             ], 422);
         }
-
-        $data = $validator->validated();
-        $user = $request->user();
-        
-        if (isset($data['password'])) {
-
-            if (!Hash::check($request->current_password, $user->password)) {
-                return response()->json([
-                    'message' => 'Kolom tidak valid',
-                    'errors' => [
-                        'current_password' => ['Password lama tidak sesuai.']
-                    ]
-                ], 422);
-            }
-            $data['password'] = bcrypt($data['password']);
-        }
-
-        if(isset($data['image'])) {
-            $filePath = $this->uploadFile($data['image'], $user->id);
-            $data['image'] = $filePath;
-        }
-
-        $user->update($data);
-
-        return response()->json([
-            'message' => 'Berhasil update user!',
-            'user' => $user
-        ], 200);
+        $data['password'] = Hash::make($data['password']);
+    } else {
+        unset($data['password']);
+        unset($data['current_password']);
+        unset($data['password_confirmation']);
     }
+
+    // Logic Upload Image
+    if ($request->hasFile('photo_profile')) {
+        
+        // 1. Upload file
+        $filePath = $this->uploadFile($request->file('photo_profile'), $user->id);
+        
+        // 2. Simpan path file (string) ke array data
+        // Ini akan menimpa objek file asli dengan string path
+        $data['photo_profile'] = $filePath; 
+        
+        // ⚠️ JANGAN DI-UNSET JIKA KOLOM DATABASE BERNAMA 'photo_profile'
+    }
+
+    // Update user
+    // Pastikan model User Anda di $fillable sudah ada 'photo_profile'
+    $user->update($data);
+
+    return response()->json([
+        'message' => 'Berhasil update user!',
+        'user'    => $user
+    ], 200);
+}
 }

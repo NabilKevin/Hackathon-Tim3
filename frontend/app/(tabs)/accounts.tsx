@@ -1,37 +1,62 @@
+import { storageurl } from "@/services/api"; // Import URL storage
 import { getUser, logout } from "@/services/auth";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router"; // Import useFocusEffect
+import React, { useCallback, useState } from "react";
 import {
-  Alert, Image,
+  Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   useColorScheme,
-  View
+  View,
 } from "react-native";
 
 export default function Account() {
   const isDark = useColorScheme() === "dark";
   const [user, setUser] = useState({
-    username: "",
+    username: "Loading...",
     email: "",
-    image: "",
+    image: null as string | null, // Set type explicit
   });
 
   const fetchData = async () => {
-    const data = await getUser();
-    console.log(data);
-    
-    setUser(data);
+    try {
+      const data = await getUser();
+      console.log("User Data:", data);
+      
+      // LOGIC HANDLING GAMBAR
+      let imageUri = null;
+      if (data.photo_profile) {
+        // Jika link sudah lengkap (http...), pakai langsung.
+        // Jika path relatif (avatars/foto.jpg), gabungkan dengan storageurl
+        imageUri = data.photo_profile.startsWith('http') 
+            ? data.photo_profile
+            : `${storageurl}${data.photo_profile}`;
+      }
+
+      setUser({
+        ...data,
+        image: imageUri
+      });
+
+    } catch (error) {
+      console.log("Gagal ambil profil", error);
+    }
   }
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // GANTI useEffect DENGAN useFocusEffect
+  // Agar data refresh otomatis saat kembali dari halaman Edit Profile
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
+
   return (
     <ScrollView
       style={[
@@ -42,22 +67,27 @@ export default function Account() {
       {/* PROFILE HEADER */}
       <View style={styles.header}>
         <Image
-          source={user?.image ? { uri: user.image } : require("../../assets/images/profil-default.jpg")}
+          source={
+            user.image 
+              ? { uri: user.image } 
+              : require("../../assets/images/profil-default.jpg") // Pastikan path ini benar
+          }
           style={styles.avatar}
         />
 
         <Text style={[styles.name, { color: isDark ? "#fff" : "#1F2D5A" }]}>
-          {user?.username}
+          {user.username}
         </Text>
         <Text style={[styles.email, { color: isDark ? "#9DA5C5" : "#6B7280" }]}>
-          {user?.email}
+          {user.email}
         </Text>
 
         <TouchableOpacity
           style={[
             styles.editButton,
             { backgroundColor: isDark ? "#000" : "#fff" },
-          ]} onPress={() => router.push("../edit-profile")}
+          ]} 
+          onPress={() => router.push("../edit-profile")}
         >
           <Text
             style={[
@@ -108,31 +138,40 @@ export default function Account() {
 
       {/* LOGOUT BUTTON */}
       <TouchableOpacity
-  style={[
-    styles.logoutButton,
-    {
-      backgroundColor: isDark ? "#4C1D1D" : "#FFE5E5",
-      shadowColor: isDark ? "#000" : "#FF6B6B",
-    },
-  ]}
-  onPress={async () => {
-    const result = await logout();
-    if (result) {
-      router.replace("../login"); // pakai replace agar tidak bisa back
-    } else {
-      Alert.alert("Error", "Gagal logout, coba lagi");
-    }
-  }}
->
-  <Text
-    style={[
-      styles.logoutText,
-      { color: isDark ? "#FFB4B4" : "#E53935" },
-    ]}
-  >
-    Keluar / Logout
-  </Text>
-</TouchableOpacity>
+        style={[
+          styles.logoutButton,
+          {
+            backgroundColor: isDark ? "#4C1D1D" : "#FFE5E5",
+            shadowColor: isDark ? "#000" : "#FF6B6B",
+          },
+        ]}
+        onPress={async () => {
+          Alert.alert("Konfirmasi", "Apakah Anda yakin ingin keluar?", [
+            { text: "Batal", style: "cancel" },
+            { 
+              text: "Keluar", 
+              style: "destructive",
+              onPress: async () => {
+                const result = await logout();
+                if (result) {
+                  router.replace("../login"); 
+                } else {
+                  Alert.alert("Error", "Gagal logout, coba lagi");
+                }
+              }
+            }
+          ]);
+        }}
+      >
+        <Text
+          style={[
+            styles.logoutText,
+            { color: isDark ? "#FFB4B4" : "#E53935" },
+          ]}
+        >
+          Keluar / Logout
+        </Text>
+      </TouchableOpacity>
 
       {/* VERSION */}
       <Text
@@ -190,6 +229,7 @@ export const MenuItem = ({ label, rightText, icon, isDark, onPress }: MenuItemPr
     />
   </TouchableOpacity>
 );
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
@@ -204,6 +244,8 @@ const styles = StyleSheet.create({
     height: 85,
     borderRadius: 50,
     marginBottom: 12,
+    borderWidth: 1, // Opsional: border tipis agar rapi
+    borderColor: '#ddd'
   },
 
   name: {

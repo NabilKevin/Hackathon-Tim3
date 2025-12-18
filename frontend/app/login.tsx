@@ -31,9 +31,6 @@ export default function Login() {
       Alert.alert("Login Berhasil!");
       
 
-      // 1️⃣ Cek apakah user punya kendaraan
-
-      // 3. Cek kendaraan
       // 1️⃣ CEK KENDARAAN
       try {
         await api.get("/vehicles/detail");

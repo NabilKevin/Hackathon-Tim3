@@ -30,6 +30,7 @@ interface NotificationItem {
   id: number;
   title: string;
   message: string;
+  content: string;
   type: "security" | "service" | "system" | "warning";
   is_read: number;
   created_at: string;
@@ -63,21 +64,34 @@ export default function NotificationScreen() {
     try {
       setLoading(true);
       const token = await getToken();
-      // Simulasi logic, ganti dengan API asli Anda
+      
       if (token) {
+         // Ambil data dari API
          const res = await getNotification(token, type);
-         const filtered = type === "all" ? res : res.filter((item: any) => item.type === type);
+         
+         // Pastikan res adalah array (jaga-jaga jika API error/null)
+         const safeRes = Array.isArray(res) ? res : [];
+
+         // Lakukan filtering
+         const filtered = type === "all" 
+            ? safeRes 
+            : safeRes.filter((item: any) => item.type === type);
+         
+         // Masukkan ke state (bisa array isi data, atau array kosong)
          setData(filtered);
+
       } else {
-         // Mock data jika token tidak ada (untuk preview UI)
-         // setData([]); 
+         // Jika tidak ada token, kosongkan data
+         setData([]); 
       }
     } catch (e) {
       console.log("Gagal load notifikasi", e);
+      // Jika error, anggap data kosong agar UI tidak crash
+      setData([]); 
     } finally {
       setLoading(false);
     }
-  };
+};
 
   useEffect(() => {
     fetchNotifications(activeFilter);
@@ -228,7 +242,7 @@ export default function NotificationScreen() {
             </Text>
             
             <Text style={[styles.modalMessage, { color: isDark ? "#CBD5E1" : "#334155" }]}>
-              {selectedItem?.excerpt}
+              {selectedItem?.content}
             </Text>
             <Text style={[styles.modalTime, { color: isDark ? "#94A3B8" : "#64748B" }]}>
               {selectedItem?.time}

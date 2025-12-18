@@ -4,6 +4,7 @@ import { router, useFocusEffect } from "expo-router";
 import React from "react";
 import {
   Alert,
+  BackHandler, // Import BackHandler
   ScrollView,
   StyleSheet,
   Text,
@@ -21,15 +22,55 @@ export default function ConnectDevice() {
   const [connected, setConnected] = React.useState(false);
   const [loadingStatus, setLoadingStatus] = React.useState(true);
 
+  // --- LOGIC TOMBOL BACK ---
+  const handleBack = () => {
+    // 1. Jika sudah connect, langsung boleh keluar
+    if (connected) {
+      router.replace('/(tabs)/vehicles');
+      return true;
+    }
+
+    // 2. Jika belum connect, tampilkan Alert Peringatan
+    Alert.alert(
+      "Perangkat Belum Terhubung",
+      "Agar fitur pelacakan berfungsi, Anda wajib menghubungkan perangkat. Yakin ingin keluar?",
+      [
+        {
+          text: "Hubungkan Dulu",
+          style: "cancel",
+          onPress: () => {}, // Tetap di halaman ini
+        },
+        {
+          text: "Keluar Saja",
+          style: "destructive",
+          // Paksa keluar walaupun belum connect
+          onPress: () => router.replace('/(tabs)/accounts'), 
+        },
+      ]
+    );
+    return true; // Mencegah aksi default back (Android)
+  };
+
+  // --- HANDLE BACK BUTTON FISIK (ANDROID) ---
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        return handleBack();
+      };
+
+      // Pasang listener
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      // Copot listener saat pindah halaman
+      return () => subscription.remove();
+    }, [connected]) // Re-run jika status connected berubah
+  );
 
   const checkDeviceStatus = async () => {
     try {
       const res = await api.post("/devices/status");
-
       console.log("STATUS CHECK:", res.data);
-
       const isConnected = Boolean(res.data?.device_connected);
-
       setConnected(isConnected);
     } catch (error) {
       console.log("STATUS ERROR:", error);
@@ -38,18 +79,17 @@ export default function ConnectDevice() {
       setLoadingStatus(false);
     }
   };
+
   const hasCheckedRef = React.useRef(false);
 
   useFocusEffect(
     React.useCallback(() => {
       if (hasCheckedRef.current) return;
-
       hasCheckedRef.current = true;
       setLoadingStatus(true);
       checkDeviceStatus();
     }, [])
   );
-
 
   const handlePingDevice = async () => {
     if (connected) {
@@ -59,7 +99,6 @@ export default function ConnectDevice() {
 
     try {
       setPairing(true);
-
       const serialNumber = `SR-${Date.now()}`;
 
       await api.post("/devices/ping", {
@@ -67,10 +106,10 @@ export default function ConnectDevice() {
       });
 
       setConnected(true);
-
-      Alert.alert("Berhasil", "Perangkat berhasil terhubung");
-
-      router.replace("/dashboard");
+      Alert.alert("Berhasil", "Perangkat berhasil terhubung", [
+        { text: "Lanjut ke Dashboard", onPress: () => router.replace("/dashboard") }
+      ]);
+      
     } catch (error: any) {
       Alert.alert(
         "Gagal",
@@ -80,7 +119,6 @@ export default function ConnectDevice() {
       setPairing(false);
     }
   };
-
 
   return (
     <ScrollView
@@ -97,7 +135,8 @@ export default function ConnectDevice() {
           { paddingTop: insets.top + 12 },
         ]}
       >
-        <TouchableOpacity onPress={() => router.replace('/(tabs)/vehicles')} style={styles.backButton}>
+        {/* Tombol Back Custom */}
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons
             name="chevron-back"
             size={26}
@@ -205,7 +244,6 @@ export default function ConnectDevice() {
         <Text style={[styles.guideTitle, { color: isDark ? "#fff" : "#000" }]}>
           Cara Menghubungkan
         </Text>
-
         <Text style={styles.guideItem}>
           1. Pastikan perangkat kendaraan dalam kondisi aktif.
         </Text>
@@ -225,7 +263,6 @@ export default function ConnectDevice() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -239,7 +276,6 @@ const styles = StyleSheet.create({
   },
   backButton: { marginRight: 8 },
   headerTitle: { fontSize: 22, fontWeight: "700" },
-
   infoCard: {
     marginHorizontal: 20,
     padding: 20,
@@ -258,7 +294,6 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     marginTop: 8,
   },
-
   statusCard: {
     marginHorizontal: 20,
     marginTop: 20,
@@ -286,7 +321,6 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     opacity: 0.3,
   },
-
   primaryButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -302,7 +336,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 15,
   },
-
   guideCard: {
     marginHorizontal: 20,
     marginTop: 25,

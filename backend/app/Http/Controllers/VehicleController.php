@@ -270,9 +270,9 @@ class VehicleController extends Controller
                 'machine_capacity' => $telemetry->machine_capacity,
                 'gps' => $deviceConnected,
                 'obd' => $deviceConnected,
-                'photo' => $vehicle->photo_path,
+                'photo' => $vehicle->photo_path
             ]
-        ]);
+        ]); 
     }
 
     public function telemetry()
