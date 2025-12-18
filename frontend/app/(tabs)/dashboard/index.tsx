@@ -4,19 +4,20 @@ import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
-import MapView, { Marker, Circle } from "react-native-maps";
 import Svg, { Path } from "react-native-svg";
+import { WebView } from "react-native-webview";
 
 interface Region {
   latitude: number;
   longitude: number;
 }
 
+// 🔧 GANTI INI DENGAN KOORDINAT RUMAHMU
+
 export default function HomeScreen() {
-  const mapRef = useRef<MapView>(null);
+  const webViewRef = useRef<WebView>(null);
 
   const [region, setRegion] = useState<Region | null>(null); // kendaraan
-  const [userLocation, setUserLocation] = useState<Region | null>(null); // user (opsional)
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
 
@@ -24,12 +25,97 @@ export default function HomeScreen() {
   const [telemetry, setTelemetry] = useState<any>(null);
   const [security, setSecurity] = useState<any>(null);
   const [geofence, setGeofence] = useState<any>({});
+  const [location, setLocation] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [latestNotification, setLatestNotification] = useState<any>(null);
   const [alarmActive, setAlarmActive] = useState(false);
   const [engineOn, setEngineOn] = useState(true);
   const [hasUnread, setHasUnread] = useState(false);
 
+  // ----------------- LEAFLET HTML TEMPLATE -----------------
+  const leafletHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+      <style>
+        body { margin: 0; padding: 0; }
+        #map { width: 100%; height: 100vh; background: #e5e7eb; }
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <script>
+        var map = L.map('map', {
+            zoomControl: false,
+            attributionControl: false 
+        }).setView([${geofence?.latitude || location?.latitude || -6}, ${geofence?.longitude || location?.longitude || 106}], 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Marker Kendaraan (biru)
+        var vehicleMarker = L.circleMarker([0, 0], {
+            color: 'white',
+            fillColor: '#4285F4',
+            fillOpacity: 1,
+            radius: 10,
+            weight: 3
+        }).addTo(map);
+
+        // Lingkaran Radius 100m (hijau) — TIDAK ADA MARKER DI TENGAH
+        ${security?.geofence_enabled && 
+          (`
+            
+            var geoCircle = L.circle([${geofence?.latitude}, ${geofence?.longitude}], {
+                color: '#0f130fff',
+                fillColor: '#4CAF50',
+                fillOpacity: 0.2,
+                radius: ${geofence?.radius || 100},
+            }).addTo(map);
+          `)
+        }
+
+        // Sembunyikan marker awal
+        vehicleMarker.setOpacity(0);
+
+        // Fungsi update posisi kendaraan
+        function updateVehicleLocation(lat, lng) {
+            vehicleMarker.setLatLng([lat, lng]);
+            vehicleMarker.setOpacity(1);
+            fitBoundsIfNeeded();
+        }
+
+        // Fungsi zoom ke area antara kendaraan & lingkaran
+        ${security?.geofence_enabled && 
+          (`
+            function fitBoundsIfNeeded() {
+                var vLatlng = vehicleMarker.getLatLng();
+                if (vehicleMarker.getOpacity() > 0) {
+                    var bounds = new L.LatLngBounds(
+                        [vLatlng.lat, vLatlng.lng],
+                        [${geofence?.latitude}, ${geofence?.longitude}]
+                    );
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+                } else {
+                    map.setView([${geofence?.latitude}, ${geofence?.longitude}], 15);
+                }
+            }
+          `)
+        }
+
+      </script>
+    </body>
+    </html>
+  `;
+
+  // ----------------- FUNGSI UPDATE MAP -----------------
+  const updateVehicleLocation = (lat: number, lng: number) => {
+    webViewRef.current?.injectJavaScript(`updateVehicleLocation(${lat}, ${lng}); true;`);
+  };
 
   // ----------------- API FETCH -----------------
   const fetchLatestNotification = async () => {
@@ -65,46 +151,22 @@ export default function HomeScreen() {
 
       const lat = parseFloat(data.vehicle.latitude);
       const lng = parseFloat(data.vehicle.longitude);
-
-      const newRegion = { latitude: lat, longitude: lng };
-      setRegion(newRegion);
-
-      fitMapToRelevantArea(newRegion);
+      console.log(data);
+      
+      setRegion({ latitude: lat, longitude: lng });
+      updateVehicleLocation(lat, lng);
+      setLocation({ latitude: lat, longitude: lng });
       setTelemetry(data.telemetry);
       setSecurity(data.security);
       setAlarmActive(data.telemetry?.alarm_status ?? false);
       setEngineOn(data.telemetry?.engine_status ?? true);
-      setGeofence(data?.geofence);
+      setGeofence(data?.geofence || {})
     } catch (error) {
       console.log("FETCH VEHICLE STATUS ERROR:", error);
     } finally {
       setLoading(false);
     }
 
-  };
-
-  // ----------------- FIT MAP TO AREA -----------------
-  const fitMapToRelevantArea = (veh: Region | null = region) => {
-    if (!mapRef.current) return;
-
-    if (veh) {
-      // Hitung delta agar radius 100m terlihat jelas
-      const delta = 0.002; // ~220 meter (cukup untuk 100m radius)
-      mapRef.current.animateToRegion(
-        {
-          latitude: (veh.latitude + geofence?.latitude) / 2,
-          longitude: (veh.longitude + geofence?.longitude) / 2,
-          latitudeDelta: Math.max(Math.abs(veh.latitude - geofence?.latitude) * 2, delta),
-          longitudeDelta: Math.max(Math.abs(veh.longitude - geofence?.longitude) * 2, delta),
-        },
-        500
-      );
-    } else {
-      mapRef.current.animateToRegion(
-        { ...geofence, latitudeDelta: 0.002, longitudeDelta: 0.002 },
-        500
-      );
-    }
   };
 
   // ----------------- LOCATION -----------------
@@ -114,15 +176,14 @@ export default function HomeScreen() {
       const lat = loc.coords.latitude;
       const lng = loc.coords.longitude;
 
-      const newLocation = { latitude: lat, longitude: lng };
-      setUserLocation(newLocation);
-      // Opsional: kamu bisa fokus ke lokasi ini, tapi utamakan rumah & kendaraan
+      // Tidak perlu update peta karena kita hanya fokus ke kendaraan & rumah
+      // Jika mau, bisa tambahkan marker pengguna nanti
     } catch (err) {
       alert("Tidak dapat mengambil lokasi");
     }
   }
 
-  // ----------------- INITIAL -----------------
+  // ----------------- INITIAL SETUP -----------------
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -149,7 +210,7 @@ export default function HomeScreen() {
     }, [])
   );
 
-  // ----------------- TOGGLES -----------------
+  // ----------------- ALARM & ENGINE -----------------
   const handleAlarmToggle = async () => {
     try {
       if (alarmActive) {
@@ -196,6 +257,7 @@ export default function HomeScreen() {
       style={[styles.container, { backgroundColor: isDark ? "#111" : "#F9FAFB" }]}
       showsVerticalScrollIndicator={false}
     >
+      {/* HEADER */}
       <View style={[styles.header, { backgroundColor: isDark ? "#1f1f1f" : "#fff" }]}>
         <Svg width="46" height="48" viewBox="0 0 46 48" fill="none">
           <Path d="M6 24C6 26.3638 6.44618 28.7044 7.31308 30.8883C8.17997 33.0722 9.4506 35.0565 11.0524 36.7279C12.6542 38.3994 14.5558 39.7252 16.6487 40.6298C18.7416 41.5344 20.9847 42 23.25 42C25.5153 42 27.7584 41.5344 29.8513 40.6298C31.9442 39.7252 33.8458 38.3994 35.4476 36.7279C37.0494 35.0565 38.32 33.0722 39.1869 30.8883C40.0538 28.7044 40.5 26.3638 40.5 24C40.5 21.6362 40.0538 19.2956 39.1869 17.1117C38.32 14.9278 37.0494 12.9435 35.4476 11.2721C33.8458 9.60062 31.9442 8.27475 29.8513 7.37017C27.7584 6.46558 25.5153 6 23.25 6C20.9847 6 18.7416 6.46558 16.6487 7.37017C14.5558 8.27475 12.6542 9.60062 11.0524 11.2721C9.4506 12.9435 8.17997 14.9278 7.31308 17.1117C6.44618 19.2956 6 21.6362 6 24Z" stroke="#2F80ED" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -216,47 +278,27 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* --- NATIVE MAPVIEW DENGAN RADIUS --- */}
+      {/* --- LEAFLET MAP IMPLEMENTATION --- */}
       <View style={styles.mapContainer}>
-        <MapView
-          ref={mapRef}
-          style={StyleSheet.absoluteFill}
-          initialRegion={{
-            latitude: geofence?.latitude,
-            longitude: geofence?.longitude,
-            latitudeDelta: 0.002,
-            longitudeDelta: 0.002,
-          }}
-          showsUserLocation={false}
-          showsMyLocationButton={false}
-          zoomEnabled={true}
-          scrollEnabled={true}
-        >
-          {/* Marker Kendaraan — tetap ditampilkan */}
-          {region && (
-            <Marker
-              coordinate={region}
-              title="Kendaraan"
-              pinColor="#4285F4"
-            />
-          )}
-
-          {/* ❌ HAPUS MARKER RUMAH — TIDAK DITAMPILKAN */}
-
-          {/* ✅ TETAP TAMPILKAN LINGKARAN RADIUS 100m */}
-          {
-            security?.geofence_enabled && region && (
-              <Circle
-                center={geofence}
-                radius={100}
-                fillColor="rgba(76, 175, 80, 0.2)"
-                strokeColor="#4CAF50"
-                strokeWidth={2}
-              />
-            )
-          }
-        </MapView>
-
+        {Platform.OS === 'web' ? (
+          <iframe
+            srcDoc={leafletHTML}
+            style={{ width: '100%', height: '100%', border: 'none' }}
+          />
+        ) : (
+          <WebView
+            ref={webViewRef}
+            originWhitelist={['*']}
+            source={{ html: leafletHTML }}
+            style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}
+            scrollEnabled={false}
+            onLoadEnd={() => {
+              if (region) {
+                updateVehicleLocation(region.latitude, region.longitude);
+              }
+            }}
+          />
+        )}
         <TouchableOpacity
           onPress={goToMyLocation}
           style={[styles.myLocationBtn, { backgroundColor: isDark ? "#1e293b" : "#fff" }]}
@@ -264,7 +306,7 @@ export default function HomeScreen() {
           <Ionicons name="locate" size={22} color={isDark ? "#fff" : "#1e293b"} />
         </TouchableOpacity>
 
-        {/* Tag Lokasi */}
+        {/* Tag Lokasi Kendaraan */}
         {region && (
           <View style={[styles.locationTag, { backgroundColor: isDark ? "#0f172a" : "#1E293B" }]}>
             <Text style={{ color: "#fff", fontSize: 12 }}>
@@ -272,18 +314,18 @@ export default function HomeScreen() {
             </Text>
           </View>
         )}
-        {
-          security?.geofence_enabled &&(
-            <View style={[styles.locationTag, { backgroundColor: isDark ? "#0f172a" : "#FF9800", top: 50 }]}>
-              <Text style={{ color: "#fff", fontSize: 12 }}>
-                Rumah: {geofence?.latitude.toFixed(5)}, {geofence?.longitude.toFixed(5)}
-              </Text>
-            </View>
-          )
+
+        {/* Tag Lokasi Rumah (opsional) */}
+        {security?.geofence_enabled && region &&
+          <View style={[styles.locationTag, { backgroundColor: isDark ? "#0f172a" : "#4CAF50", top: 50 }]}>
+            <Text style={{ color: "#fff", fontSize: 12 }}>
+              Rumah: {parseFloat(geofence?.latitude)?.toFixed(5)}, {parseFloat(geofence?.longitude)?.toFixed(5)}
+            </Text>
+          </View>
         }
       </View>
 
-      {/* ACTIONS, STATUS, DLL — SAMA SEPERTI SEBELUMNYA */}
+      {/* ACTIONS */}
       <View style={styles.actions}>
         <TouchableOpacity style={[styles.actionBtn, { backgroundColor: alarmActive ? "#22C55E" : "#FF4D4F" }]} onPress={handleAlarmToggle}>
           <Ionicons name={alarmActive ? "notifications" : "notifications-off-outline"} size={25} color="#fff" />
@@ -295,6 +337,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* STATUS */}
       <Text style={[styles.sectionTitle, { color: isDark ? "#fff" : "#111827" }]}>Status Kendaraan</Text>
       <View style={styles.statusGrid}>
         {renderStatusCard("ODOMETER", telemetry ? `${telemetry.odometer} km` : "-", isDark, <MaterialCommunityIcons name="counter" size={20} color="#3B82F6" />)}
@@ -314,6 +357,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* RECENT */}
       <Text style={[styles.sectionTitle, { color: isDark ? "#fff" : "#111827" }]}>Terkini</Text>
       <View style={[styles.recentCard, { backgroundColor: isDark ? "#1f1f1f" : "#fff" }]}>
         <View style={[styles.recentIndicator, { backgroundColor: latestNotification?.is_read ? "#9CA3AF" : "#EF4444" }]} />
@@ -381,7 +425,6 @@ const styles = StyleSheet.create({
     position: "relative",
     borderRadius: 16,
     overflow: "hidden",
-    marginBottom: 15,
   },
   locationTag: {
     position: "absolute",

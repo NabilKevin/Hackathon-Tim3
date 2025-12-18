@@ -46,7 +46,7 @@ class RealtimeService
             'longitude' => $vehicle->location->longitude + (rand(-2, 2) / 100),
         ]);
 
-        if ($vehicle->last_notified_service + 200 >= $vehicle->telemetry->odometer) {
+        if ($vehicle->last_notified_service + 200 <= $vehicle->telemetry->odometer) {
             ServiceType::where('category', 'required')->get()->map(function($service) use($vehicle, $user) {
                 createNotification($user->id, $vehicle->id, 'Pengigat service!', "Jangan lupa untuk servis $service->name, $service->km_target km lagi!", 'service');
             });

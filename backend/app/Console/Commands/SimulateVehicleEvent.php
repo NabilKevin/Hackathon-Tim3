@@ -40,7 +40,9 @@ class SimulateVehicleEvent extends Command
         }
 
         foreach ($vehicles as $vehicle) {
-            RealtimeService::handleEvent($vehicle);
+            if($vehicle->telemetry->engine_status) {
+                RealtimeService::handleEvent($vehicle);
+            }
 
             // Anti-theft must be enabled
             if (!$vehicle->securitySetting?->anti_theft_enabled) {

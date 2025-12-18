@@ -310,29 +310,4 @@ class VehicleController extends Controller
         return response()->json(['message' => 'Device berhasil terhubung']);
     }
 
-    public function updateOdometer(Request $request, $id)
-    {
-        $user = $request->user();
-        $vehicle = Vehicle::firstWhere('user_id', $user->id);
-
-        if (!$vehicle) return response()->json(['message' => 'Kendaraan tidak ditemukan!'], 404);
-        if ($vehicle->user_id !== $user->id) return response()->json(['message' => 'Bukan kendaraan anda!'], 403);
-
-        $validator = Validator::make($request->all(), ['odometer' => 'required|numeric']);
-        if ($validator->fails()) return response()->json(['message' => 'Invalid field', 'errors' => $validator->errors()], 422);
-
-        $data = $validator->validated();
-        $telemetry = VehicleTelemetry::firstWhere('vehicle_id', $id);
-        $telemetry->update($data);
-
-        if ($vehicle->last_notified_service + 200 >= $data['odometer']) {
-            ServiceType::where('category', 'required')->get()->map(function($service) use($vehicle, $user) {
-                createNotification($user->id, $vehicle->id, 'Pengigat service!', "Jangan lupa untuk servis $service->name, $service->km_target km lagi!", 'service');
-            });
-
-            $vehicle->update(['last_notified_service' => $data['odometer']]);
-        }
-
-        return response()->json(['message' => 'Berhasil update odometer!'], 200);
-    }
 }
