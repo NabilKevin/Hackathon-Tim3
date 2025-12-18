@@ -61,4 +61,98 @@ composer install
 cp .env.example .env
 php artisan key:generate
 php artisan migrate --seed
+php artisan serve --host 0.0.0.0
+
+Langkah Instalasi
+cd backend
+composer install
+cp .env.example .env
+
+
+Buka .env dan atur konfigurasi database:
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1      # Sesuaikan IP jika menggunakan device fisik
+DB_PORT=3306
+DB_DATABASE=sinyalroda
+DB_USERNAME=root
+DB_PASSWORD=secret
+
+
+Generate app key:
+
+php artisan key:generate
+
+
+Migrasi dan seed database:
+
+php artisan migrate --seed
+
+
+Jalankan server:
+
 php artisan serve
+
+
+Server akan berjalan di: http://127.0.0.1(IP Komputer):8000
+
+⚠️ Jika menggunakan device fisik untuk testing, pastikan IP backend dan device sama dalam jaringan lokal. Misal:
+
+DB_HOST=192.168.1.100
+BASE_URL=http://192.168.1.100:8000/api
+
+3. Frontend (React Native + Expo)
+Prasyarat
+
+Node.js ≥ 18
+
+npm atau yarn
+
+Expo CLI
+
+npm install -g expo-cli
+
+
+Download Expo Go di Android/iOS untuk testing device fisik
+
+Langkah Instalasi
+cd frontend
+npm install
+
+
+Buka file frontend/services/api.ts dan pastikan BASE_URL sesuai dengan IP backend, misal:
+
+export const BASE_URL = "http://192.168.1.100:8000/api";
+
+
+Jalankan aplikasi:
+
+npm start
+
+
+Akan terbuka Metro Bundler. Scan QR di Expo Go untuk membuka di device fisik atau jalankan di emulator.
+
+4. Build APK Android (Production)
+
+Login ke Expo
+
+npx expo login
+
+
+Konfigurasi EAS Build
+
+eas build:configure
+
+
+Pilih platform: Android
+
+Ini akan membuat file eas.json otomatis
+
+Build APK
+
+eas build -p android --profile production
+
+
+Tunggu proses selesai. Link download APK akan muncul di dashboard Expo: https://expo.dev/accounts/<username>/projects/sinyalroda-app/builds
+
+⚠️ Pastikan backend tetap berjalan saat testing aplikasi mobile, terutama untuk fetch data real-time.

@@ -133,44 +133,54 @@ export default function HomeScreen() {
 
   // ----------------- ALARM & ENGINE -----------------
   const handleAlarmToggle = async () => {
-    try {
-      if (alarmActive) {
-        await api.post("/vehicles/alarm/off");
-        setAlarmActive(false);
-        alert("Alarm dimatikan");
-      } else {
-        await api.post("/vehicles/alarm/on");
-        setAlarmActive(true);
-        alert("Alarm diaktifkan");
-      }
-    } catch (error: any) {
-      if (error.response?.status === 403) {
-        alert("Aktifkan Anti-Theft Mode terlebih dahulu");
-      } else {
-        alert("Gagal mengubah status alarm");
-      }
+  try {
+    if (alarmActive) {
+      await api.post("/vehicles/alarm/off");
+      setAlarmActive(false);
+      alert("Alarm dimatikan");
+    } else {
+      await api.post("/vehicles/alarm/on");
+      setAlarmActive(true);
+      alert("Alarm diaktifkan");
     }
-  };
 
-  const handleEngineToggle = async () => {
-    try {
-      if (engineOn) {
-        await api.post("/vehicles/engine/off");
-        setEngineOn(false);
-        alert("Mesin dimatikan");
-      } else {
-        await api.post("/vehicles/engine/on");
-        setEngineOn(true);
-        alert("Mesin dinyalakan");
-      }
-    } catch (error: any) {
-      if (error.response?.status === 403) {
-        alert("Aktifkan Anti-Theft Mode terlebih dahulu");
-      } else {
-        alert("Gagal mengubah status mesin");
-      }
+    // Fetch ulang status dari server
+    await fetchVehicleStatus();
+  } catch (error: any) {
+    if (error.response?.status === 403) {
+      alert("Aktifkan Anti-Theft Mode terlebih dahulu");
+    } else if (error.response?.status === 404) {
+      alert("Trigger notifikasi Getaran belum diaktifkan");
+    } else {
+      alert("Gagal mengubah status mesin");
     }
-  };
+  }
+};
+
+const handleEngineToggle = async () => {
+  try {
+    if (engineOn) {
+      await api.post("/vehicles/engine/off");
+      setEngineOn(false);
+      alert("Mesin dimatikan");
+    } else {
+      await api.post("/vehicles/engine/on");
+      setEngineOn(true);
+      alert("Mesin dinyalakan");
+    }
+
+    // Fetch ulang status dari server
+    await fetchVehicleStatus();
+  } catch (error: any) {
+    if (error.response?.status === 403) {
+      alert("Aktifkan Anti-Theft Mode terlebih dahulu");
+    } else if (error.response?.status === 404) {
+      alert("Trigger notifikasi Mesin Menyala belum diaktifkan");
+    } else {
+      alert("Gagal mengubah status mesin");
+    }
+  }
+};
 
   return (
     <ScrollView

@@ -82,20 +82,20 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function savePushToken(Request $request)
-{
-    $request->validate([
-        'expo_push_token' => 'required|string'
-    ]);
+//     public function savePushToken(Request $request)
+// {
+//     $request->validate([
+//         'expo_push_token' => 'required|string'
+//     ]);
 
-    $request->user()->update([
-        'expo_push_token' => $request->expo_push_token
-    ]);
+//     $request->user()->update([
+//         'expo_push_token' => $request->expo_push_token
+//     ]);
 
-    return response()->json([
-        'message' => 'Push token saved'
-    ]);
-}
+//     return response()->json([
+//         'message' => 'Push token saved'
+//     ]);
+// }
 
 
     /**
@@ -152,7 +152,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'username' => 'required|min:4|unique:users,username',
             'email' => 'required|email:dns|unique:users,email',
-            'password' => 'required|min:8|confirmed'
+            'password' => 'required|min:8|confirmed',
         ]);
 
         if ($validator->fails()) {

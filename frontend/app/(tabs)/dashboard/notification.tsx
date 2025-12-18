@@ -5,8 +5,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
-  FlatList, Modal, StyleSheet,
+  FlatList,
+  Modal,
+  ScrollView, // Tambahkan ScrollView
+  StyleSheet,
   Text,
   TouchableOpacity,
   useColorScheme,
@@ -16,11 +18,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /* ================= FILTER CONFIG ================= */
 const FILTERS = [
-  { label: "Semua", type: "all", icon: <Ionicons name="notifications-outline" size={18} color="#6B7280" /> },
-  { label: "Keamanan", type: "security", icon: <Ionicons name="shield-checkmark-outline" size={18} color="#EF4444" /> },
-  { label: "Servis", type: "service", icon: <Ionicons name="construct-outline" size={18} color="#3B82F6" /> },
-  { label: "Sistem", type: "system", icon: <Ionicons name="settings-outline" size={18} color="#0EA5E9" /> },
-  { label: "Peringatan", type: "warning", icon: <Ionicons name="warning-outline" size={18} color="#F59E0B" /> },
+  { label: "Semua", type: "all", iconName: "notifications-outline" },
+  { label: "Keamanan", type: "security", iconName: "shield-checkmark-outline" },
+  { label: "Servis", type: "service", iconName: "construct-outline" },
+  { label: "Sistem", type: "system", iconName: "settings-outline" },
+  { label: "Peringatan", type: "warning", iconName: "warning-outline" },
 ] as const;
 
 /* ================= TYPES ================= */
@@ -61,12 +63,14 @@ export default function NotificationScreen() {
     try {
       setLoading(true);
       const token = await getToken();
+      // Simulasi logic, ganti dengan API asli Anda
       if (token) {
-        const res = await getNotification(token, type);
-        const filtered = type === "all" ? res : res.filter((item: any) => item.type === type);
-        setData(filtered);
+         const res = await getNotification(token, type);
+         const filtered = type === "all" ? res : res.filter((item: any) => item.type === type);
+         setData(filtered);
       } else {
-        Alert.alert("Error", "Token tidak ditemukan");
+         // Mock data jika token tidak ada (untuk preview UI)
+         // setData([]); 
       }
     } catch (e) {
       console.log("Gagal load notifikasi", e);
@@ -94,39 +98,104 @@ export default function NotificationScreen() {
     }, [])
   );
 
-  /* ---------- ICON PER TYPE ---------- */
-  const renderIcon = (type: string) => {
-    switch (type) {
-      case "security":
-        return <Ionicons name="shield-checkmark-outline" size={24} color="#EF4444" />;
-      case "service":
-        return <Ionicons name="construct-outline" size={24} color="#3B82F6" />;
-      case "system":
-        return <Ionicons name="settings-outline" size={24} color="#0EA5E9" />;
-      case "warning":
-        return <Ionicons name="warning-outline" size={24} color="#F59E0B" />;
-      default:
-        return <Ionicons name="notifications-outline" size={24} color="#6B7280" />;
+  /* ---------- ICON RENDER HELPER ---------- */
+  const renderIcon = (type: string, size = 24, color?: string) => {
+    const defaultColor = isDark ? "#E5E7EB" : "#374151";
+    
+    // Warna spesifik icon card
+    let iconColor = color || defaultColor;
+    if (!color) {
+        if (type === 'security') iconColor = "#EF4444";
+        if (type === 'service') iconColor = "#3B82F6";
+        if (type === 'system') iconColor = "#0EA5E9";
+        if (type === 'warning') iconColor = "#F59E0B";
     }
+
+    let iconName: any = "notifications-outline";
+    if (type === "security") iconName = "shield-checkmark-outline";
+    if (type === "service") iconName = "construct-outline";
+    if (type === "system") iconName = "settings-outline";
+    if (type === "warning") iconName = "warning-outline";
+
+    return <Ionicons name={iconName} size={size} color={iconColor} />;
   };
 
- return (
+  return (
     <View style={{ flex: 1, backgroundColor: isDark ? "#0F172A" : "#F8FAFC" }}>
+      
+      {/* --- HEADER & FILTER SECTION (Sticky di atas) --- */}
+      <View style={[
+          styles.headerContainer, 
+          { paddingTop: insets.top + 10, backgroundColor: isDark ? "#0F172A" : "#F8FAFC" }
+        ]}>
+        
+        {/* Title */}
+        <Text style={[styles.headerTitle, { color: isDark ? "#FFFFFF" : "#0F172A" }]}>
+          Notifikasi
+        </Text>
+
+        {/* Horizontal Scroll Filter */}
+        <View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScrollContent}
+          >
+            {FILTERS.map((filter) => {
+              const isActive = activeFilter === filter.type;
+              
+              // Warna Tombol
+              const bgColor = isActive 
+                ? "#3B82F6" // Biru jika aktif
+                : isDark ? "#1E293B" : "#FFFFFF"; // Putih/Gelap jika tidak
+              
+              const borderColor = isActive ? "#3B82F6" : (isDark ? "#334155" : "#E2E8F0");
+              
+              // Warna Text & Icon
+              const contentColor = isActive 
+                ? "#FFFFFF" 
+                : (isDark ? "#94A3B8" : "#64748B");
+
+              return (
+                <TouchableOpacity
+                  key={filter.type}
+                  onPress={() => setActiveFilter(filter.type)}
+                  style={[
+                    styles.filterButton,
+                    { backgroundColor: bgColor, borderColor: borderColor }
+                  ]}
+                >
+                  <Ionicons name={filter.iconName as any} size={16} color={contentColor} />
+                  <Text style={[styles.filterText, { color: contentColor }]}>
+                    {filter.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </View>
+
+      {/* --- LIST NOTIFIKASI --- */}
       <FlatList
         data={data}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingTop: 8 }}
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => openModal(item)}>
             <View style={[styles.card, { backgroundColor: isDark ? "#1E293B" : "#FFFFFF" }]}>
               <View style={styles.cardRow}>
-                <View style={styles.iconWrapper}>{renderIcon(item.type)}</View>
+                <View style={[styles.iconWrapper, { backgroundColor: isDark ? "#334155" : "#EFF6FF" }]}>
+                   {renderIcon(item.type, 24)}
+                </View>
 
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={[styles.title, { color: isDark ? "#E5E7EB" : "#0F172A" }]}>
                     {item.title}
                   </Text>
-                  <Text style={styles.message}>{item.excerpt ?? item.message}</Text>
+                  <Text style={styles.message} numberOfLines={2}>
+                    {item.excerpt ?? item.message}
+                  </Text>
                 </View>
 
                 <Text style={styles.time}>{item.time ?? item.created_at}</Text>
@@ -134,24 +203,31 @@ export default function NotificationScreen() {
             </View>
           </TouchableOpacity>
         )}
+        ListEmptyComponent={
+            <Text style={{ textAlign: 'center', marginTop: 40, color: '#94A3B8' }}>
+                Tidak ada notifikasi
+            </Text>
+        }
       />
 
       {/* MODAL DETAIL */}
       <Modal
         visible={modalVisible}
-        animationType="slide"
+        animationType="fade"
         transparent
         onRequestClose={closeModal}
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContainer, { backgroundColor: isDark ? "#1E293B" : "#FFFFFF" }]}>
+            <View style={{alignItems: 'center', marginBottom: 15}}>
+                 {selectedItem && renderIcon(selectedItem.type, 40)}
+            </View>
+            
             <Text style={[styles.modalTitle, { color: isDark ? "#E5E7EB" : "#0F172A" }]}>
               {selectedItem?.title}
             </Text>
-            <Text style={[styles.modalType, { color: isDark ? "#94A3B8" : "#64748B" }]}>
-              Type: {selectedItem?.type}
-            </Text>
-            <Text style={[styles.modalMessage, { color: isDark ? "#E5E7EB" : "#0F172A" }]}>
+            
+            <Text style={[styles.modalMessage, { color: isDark ? "#CBD5E1" : "#334155" }]}>
               {selectedItem?.excerpt}
             </Text>
             <Text style={[styles.modalTime, { color: isDark ? "#94A3B8" : "#64748B" }]}>
@@ -170,76 +246,83 @@ export default function NotificationScreen() {
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  header: {
+  // HEADER
+  headerContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingBottom: 10,
+    // borderBottomWidth: 1,
+    // borderBottomColor: 'rgba(0,0,0,0.05)'
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 12,
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 16,
   },
-  filterRow: {
-    gap: 10,
+  
+  // FILTER
+  filterScrollContent: {
+    gap: 8,
+    paddingRight: 16,
   },
   filterButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  filterContent: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
     gap: 6,
   },
   filterText: {
     fontSize: 13,
     fontWeight: "600",
   },
+
+  // CARD
   card: {
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)'
   },
   cardRow: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
   iconWrapper: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 12,
-    backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
   },
   title: {
-    fontWeight: "600",
+    fontWeight: "700",
     fontSize: 15,
     marginBottom: 4,
   },
   message: {
     fontSize: 13,
     color: "#64748B",
+    lineHeight: 18,
   },
   time: {
     fontSize: 11,
     color: "#94A3B8",
     marginLeft: 6,
-    alignSelf: "flex-start",
+    marginTop: 2,
   },
 
-   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
-  modalContainer: { width: "85%", borderRadius: 14, padding: 20 },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
-  modalType: { fontSize: 13, marginBottom: 10 },
-  modalMessage: { fontSize: 15, marginBottom: 12 },
-  modalTime: { fontSize: 12, textAlign: "right", marginBottom: 20 },
-  closeButton: { backgroundColor: "#3B82F6", paddingVertical: 10, borderRadius: 10, alignItems: "center" },
+  // MODAL
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 20 },
+  modalContainer: { width: "100%", borderRadius: 20, padding: 24, paddingVertical: 30 },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, textAlign: 'center' },
+  modalMessage: { fontSize: 15, marginBottom: 20, textAlign: 'center', lineHeight: 22 },
+  modalTime: { fontSize: 12, textAlign: "center", marginBottom: 24 },
+  closeButton: { backgroundColor: "#3B82F6", paddingVertical: 12, borderRadius: 12, alignItems: "center", width: '100%' },
 });

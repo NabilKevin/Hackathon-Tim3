@@ -4,6 +4,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   StyleSheet,
   Text,
@@ -37,6 +38,7 @@ export default function Register() {
     try {
       setLoading(true);
 
+      // Pastikan endpoint sesuai dengan backend Anda
       await api.post("/register", {
         username,
         email,
@@ -57,7 +59,7 @@ export default function Register() {
     } catch (error: any) {
       if (error.response?.status === 422) {
         const errors = error.response.data.errors;
-
+        // Handle jika error object atau array
         const messages = Object.values(errors)
           .flat()
           .join("\n");
@@ -90,6 +92,7 @@ export default function Register() {
         Registrasi
       </Text>
 
+      {/* Input Username */}
       <View style={styles.inputGroup}>
         <Text style={[styles.label, { color: isDark ? "#CBD5E1" : "#374151" }]}>
           Username
@@ -109,7 +112,8 @@ export default function Register() {
           placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
         />
       </View>
-``
+
+      {/* Input Email */}
       <View style={styles.inputGroup}>
         <Text style={[styles.label, { color: isDark ? "#CBD5E1" : "#374151" }]}>
           Email
@@ -132,6 +136,7 @@ export default function Register() {
         />
       </View>
 
+      {/* Input Password */}
       <View style={styles.inputGroup}>
         <Text style={[styles.label, { color: isDark ? "#CBD5E1" : "#374151" }]}>
           Kata Sandi
@@ -153,6 +158,7 @@ export default function Register() {
         />
       </View>
 
+      {/* Input Confirm Password */}
       <View style={styles.inputGroup}>
         <Text style={[styles.label, { color: isDark ? "#CBD5E1" : "#374151" }]}>
           Konfirmasi Kata Sandi
@@ -174,8 +180,17 @@ export default function Register() {
         />
       </View>
 
-      <TouchableOpacity style={styles.primaryBtn}>
-        <Text style={styles.primaryBtnText}>Daftar</Text>
+      {/* Tombol Register */}
+      <TouchableOpacity 
+        style={[styles.primaryBtn, { opacity: loading ? 0.7 : 1 }]} 
+        onPress={handleRegister}
+        disabled={loading}
+      >
+        {loading ? (
+           <ActivityIndicator color="#fff" />
+        ) : (
+           <Text style={styles.primaryBtnText}>Daftar</Text>
+        )}
       </TouchableOpacity>
 
       <Text
@@ -217,7 +232,7 @@ export default function Register() {
             size={24}
             color={isDark ? "#F8FAFC" : "black"}
           />
-          <Text style={{ color: isDark ? "#E2E8F0" : "#000" }}>Google</Text>
+          <Text style={{ color: isDark ? "#E2E8F0" : "#000", marginLeft: 8 }}>Google</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -234,7 +249,7 @@ export default function Register() {
             size={24}
             color={isDark ? "#F8FAFC" : "black"}
           />
-          <Text style={{ color: isDark ? "#E2E8F0" : "#000" }}>Apple</Text>
+          <Text style={{ color: isDark ? "#E2E8F0" : "#000", marginLeft: 8 }}>Apple</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -293,6 +308,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     marginHorizontal: 4,
+    flexDirection: 'row', // Agar icon dan text sejajar
+    justifyContent: 'center',
   },
   footerText: {
     textAlign: "center",

@@ -14,8 +14,8 @@ export default function Splash() {
   const dot3 = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    // Loop animasi dot
-    Animated.loop(
+    // 1. Jalankan Animasi Dot
+    const anim = Animated.loop(
       Animated.stagger(200, [
         Animated.sequence([
           Animated.timing(dot1, { toValue: 1, duration: 400, useNativeDriver: true }),
@@ -30,31 +30,33 @@ export default function Splash() {
           Animated.timing(dot3, { toValue: 0.3, duration: 400, useNativeDriver: true }),
         ]),
       ])
-    ).start();
+    );
+    anim.start();
 
-    // Cek token login
-    const checkLogin = async () => {
+    // 2. Logic Cek Token & Timer Paralel
+    const prepareApp = async () => {
       try {
-        const token = await AsyncStorage.getItem("token");
+        // Jalankan Timer 2 detik DAN Cek Token bersamaan
+        const [token] = await Promise.all([
+          AsyncStorage.getItem("token"), // Cek token
+          new Promise(resolve => setTimeout(resolve, 2000)) // Minimal tampil 2 detik biar animasi selesai 1 loop
+        ]);
+
         if (token) {
-          // Ada token, langsung ke home
           router.replace("/(tabs)/dashboard");
         } else {
-          // Tidak ada token, ke login
           router.replace("/login");
         }
-      } catch (err) {
-        console.log("Error cek token:", err);
+      } catch (e) {
+        console.warn(e);
         router.replace("/login");
       }
     };
 
-    // Delay sedikit untuk splash animation
-    const timer = setTimeout(() => {
-      checkLogin();
-    }, 1500);
+    prepareApp();
 
-    return () => clearTimeout(timer);
+    // Cleanup animasi saat unmount
+    return () => anim.stop();
   }, []);
 
   return (

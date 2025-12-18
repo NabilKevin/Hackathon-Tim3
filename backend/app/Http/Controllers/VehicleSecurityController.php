@@ -193,6 +193,17 @@ class VehicleSecurityController extends Controller
             ], 403);
         }
 
+        $triggers = VehicleNotificationTrigger::firstWhere('vehicle_id', $vehicle->id);
+
+       
+        if ($triggers->vibration === 0) {
+            return response()->json([
+                'message' => 'Trigger notifikasi vibration belum diaktifkan'
+            ], 404);
+        }
+
+
+
         VehicleSecurityService::handleEvent($vehicle, 'vibration');
 
         return response()->json([
@@ -209,17 +220,15 @@ class VehicleSecurityController extends Controller
         $telemetry->update(['alarm_status' => false]);
 
         createNotification(
-        $request->user()->id,
-        $vehicle->id,
-        'Alarm Berhasil di matikan',
-        'Alarm Berhasil dimatikan di kendaraan Anda.',
-        'system'
-    );
+            $request->user()->id,
+            $vehicle->id,
+            'Alarm Berhasil di matikan',
+            'Alarm Berhasil dimatikan di kendaraan Anda.',
+            'system'
+        );
         return response()->json([
             'message' => 'Alarm berhasil dimatikan'
         ]);
-
-
     }
 
     public function engineOff(Request $request)
@@ -248,35 +257,35 @@ class VehicleSecurityController extends Controller
     }
 
     public function engineOn(Request $request)
-{
-    $vehicle = Vehicle::where('user_id', $request->user()->id)->firstOrFail();
+    {
+        $vehicle = Vehicle::where('user_id', $request->user()->id)->firstOrFail();
 
-    $security = VehicleSecuritySetting::firstWhere('vehicle_id', $vehicle->id);
-    if (!$security || !$security->anti_theft_enabled) {
+        $security = VehicleSecuritySetting::firstWhere('vehicle_id', $vehicle->id);
+        if (!$security || !$security->anti_theft_enabled) {
+            return response()->json([
+                'message' => 'Anti-Theft belum diaktifkan'
+            ], 403);
+        }
+
+        $telemetry = VehicleTelemetry::firstWhere('vehicle_id', $vehicle->id);
+        if (!$telemetry) {
+            return response()->json([
+                'message' => 'Telemetry kendaraan tidak ditemukan'
+            ], 404);
+        }
+
+        $triggers = VehicleNotificationTrigger::firstWhere('vehicle_id', $vehicle->id);
+        if ($triggers->engine_on === 0) {
+            return response()->json([
+                'message' => 'Trigger notifikasi mesin menyala belum diaktifkan'
+            ], 404);
+        }
+
+        // PANGGIL SERVICE (LANGSUNG)
+        VehicleSecurityService::engineOn($vehicle, $telemetry, $triggers);
+
         return response()->json([
-            'message' => 'Anti-Theft belum diaktifkan'
-        ], 403);
+            'message' => 'Mesin berhasil dinyalakan'
+        ]);
     }
-
-    $telemetry = VehicleTelemetry::firstWhere('vehicle_id', $vehicle->id);
-    if (!$telemetry) {
-        return response()->json([
-            'message' => 'Telemetry kendaraan tidak ditemukan'
-        ], 404);
-    }
-
-    $triggers = VehicleNotificationTrigger::firstWhere('vehicle_id', $vehicle->id);
-    if (!$triggers) {
-        return response()->json([
-            'message' => 'Trigger notifikasi tidak ditemukan'
-        ], 404);
-    }
-
-    // 🔥 PANGGIL SERVICE (LANGSUNG)
-    VehicleSecurityService::engineOn($vehicle, $telemetry, $triggers);
-
-    return response()->json([
-        'message' => 'Mesin berhasil dinyalakan'
-    ]);
-}
 }
