@@ -1,4 +1,4 @@
-import { api } from "@/services/api";
+import { api, storageurl } from "@/services/api";
 import { getToken } from "@/services/auth";
 import { getVehicleDetail } from "@/services/vehicle";
 import { router } from "expo-router";
@@ -14,6 +14,8 @@ import {
   useColorScheme,
 } from "react-native";
 
+
+
 export default function Index() {
   const isDark = useColorScheme() === "dark";
 
@@ -26,9 +28,9 @@ export default function Index() {
     transmission: "",
     gas_type: "",
     machine_capacity: "",
+    photo: null, // 2. Tambahkan field photo
   });
 
-  // Status device
   const [gpsConnected, setGpsConnected] = useState(false);
   const [obdConnected, setObdConnected] = useState(false);
 
@@ -37,7 +39,11 @@ export default function Index() {
     if (token) {
       try {
         const response = await getVehicleDetail(token);
+        // Pastikan response API mengandung field 'photo' (path gambar)
         setData(response);
+        console.log(response);
+        
+        
       } catch (error: any) {
         console.log(error.response?.data || error);
       }
@@ -48,17 +54,12 @@ export default function Index() {
 
   const fetchDeviceStatus = async () => {
     try {
-      const response = await api.post(
-        "/devices/status"
-      );
+      const response = await api.post("/devices/status");
       const result = response.data;
 
       if (result.device_connected && result.device) {
-        // Cek tipe device
         if (result.device.device_type === "GPS") setGpsConnected(true);
         if (result.device.device_type === "OBD") setObdConnected(true);
-
-        // Kalau ingin semua dianggap connect jika device_connected true
         setGpsConnected(true);
         setObdConnected(true);
       } else {
@@ -77,6 +78,13 @@ export default function Index() {
     fetchDeviceStatus();
   }, []);
 
+  // 3. LOGIKA GAMBAR (Remote vs Local)
+  // Jika data.photo ada, gabungkan dengan STORAGE_URL.
+  // Jika null/kosong, pakai require default.
+  const vehicleImageSource = data.photo
+    ? { uri: `${storageurl}${data.photo}` }
+    : require("../../../assets/images/vehicle-motor-15.jpg");
+
   return (
     <ScrollView
       style={[
@@ -87,9 +95,9 @@ export default function Index() {
       {/* HEADER */}
       <View style={styles.headerContainer}>
         <Image
-          source={require("../../../assets/images/vehicle-motor-15.jpg")}
+          source={vehicleImageSource} // Gunakan variable source yang sudah diolah
           style={styles.motorImage}
-          resizeMode="contain"
+          resizeMode="cover" // Ganti 'contain' jadi 'cover' agar gambar memenuhi area header
         />
         <View
           style={[
@@ -208,7 +216,7 @@ export default function Index() {
             Kapasitas Mesin
           </Text>
           <Text style={[styles.detailValue, { color: isDark ? "#fff" : "#000" }]}>
-            {data.machine_capacity ?? "-"}
+            {data.machine_capacity ?? "-"} cc
           </Text>
         </View>
       </View>

@@ -97,7 +97,7 @@ export default function ConnectDevice() {
           { paddingTop: insets.top + 12 },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)/vehicles')} style={styles.backButton}>
           <Ionicons
             name="chevron-back"
             size={26}

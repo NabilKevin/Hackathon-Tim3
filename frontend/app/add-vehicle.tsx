@@ -4,8 +4,10 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,11 +28,16 @@ export default function AddVehicleScreen() {
   const [fuel, setFuel] = useState("");
   const [engine, setEngine] = useState("");
   const [image, setImage] = useState<string | null>(null);
+  
+  // State loading agar user tidak tekan tombol berkali-kali
+  const [loading, setLoading] = useState(false);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Gunakan enum yang benar
+      allowsEditing: true, // Biarkan user crop gambar agar rapi
+      aspect: [4, 3],
+      quality: 0.5, // Turunkan quality agar upload lebih cepat & ringan
     });
 
     if (!result.canceled) {
@@ -39,62 +46,96 @@ export default function AddVehicleScreen() {
   };
 
   const handleSave = async () => {
-  if (!vehicleName || !brand || !year || !plate) {
-    Alert.alert("Validasi", "Mohon lengkapi semua data wajib!");
-    return;
-  }
-
-  try {
-    const formData = new FormData();
-
-    formData.append("name", vehicleName);
-    formData.append("brand", brand);
-    formData.append("transmission", transmission);
-    formData.append("year", year);
-    formData.append("plate_number", plate);
-    formData.append("gas_type", fuel);
-    formData.append("machine_capacity", engine);
-
-    // Dummy GPS (nanti bisa ambil dari Location API)
-    formData.append("latitude", "-6.2741");
-    formData.append("longitude", "106.85");
-
-    if (image) {
-      formData.append("photo", {
-        uri: image,
-        name: "vehicle.jpg",
-        type: "image/jpeg",
-      } as any);
+    // 1. VALIDASI FRONTEND LEBIH KETAT
+    // Cek semua field jika memang di backend wajib
+    if (!vehicleName || !brand || !year || !plate || !transmission || !fuel || !engine) {
+      Alert.alert("Validasi Gagal", "Mohon lengkapi semua formulir!");
+      return;
     }
 
-    await api.post("/vehicles", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    if (!image) {
+      Alert.alert("Validasi Gagal", "Foto kendaraan wajib diupload!");
+      return;
+    }
 
-    Alert.alert("Berhasil", "Kendaraan Berhasil ditambah!");
-
-    // Setelah kendaraan dibuat → cek pairing
     try {
-      const telemetry = await api.get("/vehicles/telemetry");
+      setLoading(true);
 
-      if (!telemetry.data?.device_id) {
-        router.replace("/(tabs)/vehicles/connect-device");
-      } else {
-        router.replace("/dashboard");
+      const formData = new FormData();
+
+      formData.append("name", vehicleName);
+      formData.append("brand", brand);
+      formData.append("transmission", transmission);
+      formData.append("year", year);
+      formData.append("plate_number", plate);
+      formData.append("gas_type", fuel);
+      formData.append("machine_capacity", engine);
+
+      // Dummy GPS
+      formData.append("latitude", "-6.2741");
+      formData.append("longitude", "106.85");
+
+      // 2. FORM DATA IMAGE FIX (PENTING!)
+      // Kadang Android butuh nama file & tipe yang spesifik
+      const filename = image.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename || "");
+      const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+      formData.append("photo", {
+        uri: Platform.OS === 'android' ? image : image.replace('file://', ''),
+        name: filename || "vehicle.jpg",
+        type: type,
+      } as any);
+
+      console.log("Sending Data:", formData); // Cek di terminal apa yang dikirim
+
+      await api.post("/vehicles", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      Alert.alert("Berhasil", "Kendaraan Berhasil ditambah!", [
+        {
+            text: "OK",
+            onPress: async () => {
+                // Cek pairing setelah user klik OK
+                try {
+                  const telemetry = await api.get("/vehicles/telemetry");
+                  if (!telemetry.data?.device_id) {
+                    router.replace("/(tabs)/vehicles/connect-device");
+                  } else {
+                    router.replace("/dashboard");
+                  }
+                } catch {
+                   router.replace("/(tabs)/vehicles/connect-device");
+                }
+            }
+        }
+      ]);
+
+    } catch (error: any) {
+      console.error("ERROR UPLOAD:", error.response?.data); // Lihat error detail di console
+      
+      // Ambil pesan error spesifik dari backend jika ada
+      const serverMessage = error.response?.data?.message;
+      const validationErrors = error.response?.data?.errors;
+      
+      let finalMessage = serverMessage || "Gagal menambahkan kendaraan";
+
+      // Jika ada error validasi per field (biasanya dari Laravel/Node)
+      if (validationErrors) {
+        const firstError = Object.values(validationErrors)[0];
+        if (Array.isArray(firstError)) {
+            finalMessage = firstError[0]; 
+        }
       }
-    } catch {
-      router.replace("/(tabs)/vehicles/connect-device");
-    }
 
-  } catch (error: any) {
-    Alert.alert(
-      "Gagal",
-      error.response?.data?.message || "Gagal menambahkan kendaraan"
-    );
-  }
-};
+      Alert.alert("Gagal", finalMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -102,9 +143,9 @@ export default function AddVehicleScreen() {
         flex: 1,
         backgroundColor: isDark ? "#0f172a" : "#f8fafc",
       }}
-      contentContainerStyle={{ padding: 20 }}
+      contentContainerStyle={{ padding: 20, paddingBottom: 50 }}
     >
-      {/* HEADER DENGAN TOMBOL BACK */}
+      {/* HEADER */}
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons
@@ -113,28 +154,20 @@ export default function AddVehicleScreen() {
             color={isDark ? "#E2E8F0" : "#334155"}
           />
         </TouchableOpacity>
-
-        <Text
-          style={[
-            styles.headerTitle,
-            { color: isDark ? "#F1F5F9" : "#0F172A" },
-          ]}
-        >
+        <Text style={[styles.headerTitle, { color: isDark ? "#F1F5F9" : "#0F172A" }]}>
           Tambah Kendaraan
         </Text>
-
-        {/* Placeholder untuk membuat judul tetap centered */}
         <View style={{ width: 26 }} />
       </View>
 
       {/* FORM INPUT */}
-      <InputField label="Nama Kendaraan" value={vehicleName} onChange={setVehicleName} />
-      <InputField label="Brand" value={brand} onChange={setBrand} placeholder="Honda / Yamaha / Suzuki" />
+      <InputField label="Nama Kendaraan" value={vehicleName} onChange={setVehicleName} placeholder="Contoh: Beat Merah" />
+      <InputField label="Brand" value={brand} onChange={setBrand} placeholder="Honda / Yamaha" />
       <InputField label="Tipe Transmisi" value={transmission} onChange={setTransmission} placeholder="Manual / Matic" />
-      <InputField label="Tahun Keluar" value={year} onChange={setYear} keyboardType="numeric" />
+      <InputField label="Tahun Keluar" value={year} onChange={setYear} keyboardType="numeric" placeholder="2023" />
       <InputField label="Plat Nomor" value={plate} onChange={setPlate} placeholder="B 1234 CD" />
-      <InputField label="Bahan Bakar" value={fuel} onChange={setFuel} placeholder="Pertalite / Pertamax" />
-      <InputField label="Kapasitas Mesin" value={engine} onChange={setEngine} placeholder="150cc" />
+      <InputField label="Bahan Bakar" value={fuel} onChange={setFuel} placeholder="Pertalite" />
+      <InputField label="Kapasitas Mesin" value={engine} onChange={setEngine} placeholder="150" keyboardType="numeric"/>
 
       {/* IMAGE PICKER */}
       <Text style={[styles.label, { color: isDark ? "#e2e8f0" : "#334155" }]}>
@@ -142,7 +175,10 @@ export default function AddVehicleScreen() {
       </Text>
 
       <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-        <Text style={styles.uploadButtonText}>Pilih Gambar</Text>
+        <Ionicons name="camera-outline" size={20} color="white" style={{marginRight: 8}}/>
+        <Text style={styles.uploadButtonText}>
+            {image ? "Ganti Gambar" : "Pilih Gambar"}
+        </Text>
       </TouchableOpacity>
 
       {image && (
@@ -153,19 +189,30 @@ export default function AddVehicleScreen() {
             height: 200,
             borderRadius: 12,
             marginTop: 10,
+            resizeMode: 'cover',
+            borderWidth: 1,
+            borderColor: isDark ? '#334155' : '#e2e8f0'
           }}
         />
       )}
 
       {/* SAVE BUTTON */}
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Simpan Kendaraan</Text>
+      <TouchableOpacity 
+        style={[styles.saveButton, { opacity: loading ? 0.7 : 1 }]} 
+        onPress={handleSave}
+        disabled={loading}
+      >
+        {loading ? (
+            <ActivityIndicator color="#51A2FF" />
+        ) : (
+            <Text style={styles.saveButtonText}>Simpan Kendaraan</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
-/* Reusable Input Component */
+/* Reusable Input Component (Tidak Berubah) */
 type InputProps = {
   label: string;
   value: string;
@@ -174,26 +221,13 @@ type InputProps = {
   keyboardType?: any;
 };
 
-const InputField = ({
-  label,
-  value,
-  onChange,
-  placeholder,
-  keyboardType,
-}: InputProps) => {
+const InputField = ({ label, value, onChange, placeholder, keyboardType }: InputProps) => {
   const isDark = useColorScheme() === "dark";
-
   return (
     <View style={{ marginBottom: 16 }}>
-      <Text
-        style={[
-          styles.label,
-          { color: isDark ? "#e2e8f0" : "#334155" },
-        ]}
-      >
+      <Text style={[styles.label, { color: isDark ? "#e2e8f0" : "#334155" }]}>
         {label}
       </Text>
-
       <TextInput
         style={[
           styles.input,
@@ -243,6 +277,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'center'
   },
   uploadButtonText: {
     color: "white",
@@ -250,10 +286,12 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginTop: 25,
-    backgroundColor: "#51a2ff10",
+    backgroundColor: "#51a2ff20", // Transparan sedikit
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#51A2FF"
   },
   saveButtonText: {
     color: "#51A2FF",

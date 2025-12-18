@@ -37,11 +37,13 @@ export const getVehicleDetail = async (token: string) => {
   return response.data?.data;
 };
 
-export const updateVehicle = async (token: string, data: any) => {
-  const response = await api.put("/vehicles", data, {
+export const updateVehicle = async (token: string, formData: FormData) => {
+  return api.post('/vehicles', formData, { // Pakai POST jika pakai _method: PUT
     headers: {
       Authorization: `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data',
+      method: 'PUT',
     },
   });
-  return response.data;
-}
+};
+

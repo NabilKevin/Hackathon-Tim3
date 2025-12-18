@@ -28,11 +28,9 @@ class SimulateVehicleEvent extends Command
      */
     public function handle()
     {
-
-
         $vehicles = Vehicle::with([
-            'notificationTrigger',
-            'securitySetting',
+            'notification_trigger',
+            'security',
             'telemetry'
         ])->get();
 
@@ -42,6 +40,7 @@ class SimulateVehicleEvent extends Command
         }
 
         foreach ($vehicles as $vehicle) {
+            RealtimeService::handleEvent($vehicle);
 
             // Anti-theft must be enabled
             if (!$vehicle->securitySetting?->anti_theft_enabled) {
@@ -64,11 +63,9 @@ class SimulateVehicleEvent extends Command
             }
 
             // 40% probability (realistic IoT noise)
-            if (rand(1, 100) <= 10) {
-                
+            if (rand(1, 100) <= 100) {
                 $event = $events[array_rand($events)];
 
-                RealtimeService::handleEvent($vehicle);
                 VehicleSecurityService::handleEvent($vehicle, $event);
 
                 $this->info("Simulated {$event} for vehicle #{$vehicle->id}");

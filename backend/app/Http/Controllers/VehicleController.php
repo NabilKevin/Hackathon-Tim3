@@ -6,6 +6,7 @@ use App\Models\DevicePairingLog;
 use App\Models\ServiceSchedule;
 use App\Models\ServiceType;
 use App\Models\Vehicle;
+use App\Models\VehicleGeofence;
 use App\Models\VehicleLocation;
 use App\Models\VehicleNotificationTrigger;
 use App\Models\VehicleSecuritySetting;
@@ -104,6 +105,12 @@ class VehicleController extends Controller
                 ]);
             });
 
+            VehicleGeofence::create([
+                'vehicle_id' => $vehicle->id,
+                'latitude' => $data['latitude'],
+                'longitude' => $data['longitude'],
+            ]);
+
             createNotification(
                 $user->id,
                 $vehicle->id,
@@ -150,7 +157,8 @@ class VehicleController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Invalid field',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
+                'd' => $request->all()
             ], 422);
         }
 
@@ -262,6 +270,7 @@ class VehicleController extends Controller
                 'machine_capacity' => $telemetry->machine_capacity,
                 'gps' => $deviceConnected,
                 'obd' => $deviceConnected,
+                'photo' => $vehicle->photo_path,
             ]
         ]);
     }
